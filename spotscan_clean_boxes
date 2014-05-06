@@ -1,0 +1,43 @@
+#!/bin/bash
+echo -en "Particle diameter (in pixels)   : "
+read off
+Offsp0=$(($off/2))
+Offsp=$(($Offsp0+1))
+for i in `ls *.box`
+do
+LIMIT=`cat $i | wc -l`
+Num=`echo $i | sed "s/.box//"`
+if [ -e ${Num}b.box ]
+then
+rm ${Num}b.box
+fi
+
+if [ -e ${Num}bad.box ]
+then
+rm ${Num}b.box
+fi
+
+for ((d=1; d <= LIMIT ; d++))
+do
+
+x=`cat $i | awk NR==$d | awk '{print $1}'`
+y=`cat $i | awk NR==$d | awk '{print $2}'`
+boxx=`cat $i | awk NR==$d | awk '{print $3}'`
+boxy=`cat $i | awk NR==$d | awk '{print $4}'`
+hb=$(($boxx/2))
+xX=$(($x+$hb))
+yY=$(($y+$hb))
+xOf=$(($xX%1024))
+yOf=$(($yY%1024))
+OCx=$((1024-$xOf)) 
+OCy=$((1024-$yOf))
+
+if [ "$xOf" -le "$Offsp" ] || [ "$yOf" -le "$Offsp" ] || [ "$OCx" -le "$Offsp" ] || [ "$OCy" -le "$Offsp" ]
+then
+echo "" | awk '{printf "%8d%8d%8d%8d\n",'${x}','${y}','${boxx}','${boxy}' }' >> ${Num}bad.box
+else
+echo "" | awk '{printf "%8d%8d%8d%8d\n",'${x}','${y}','${boxx}','${boxy}' }' >> ${Num}b.box
+fi
+
+done
+done
