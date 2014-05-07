@@ -1,0 +1,71 @@
+#!/bin/bash
+
+#put your path to em2em
+em2em='/home9/sharov/soft/imsc_em2em_fsc/em2em_linux.sh -t'
+#Don't forget to source your eman2!
+source ~/eman.rc
+#Correct path to motioncorrect program!
+movie_soft_path="$PWD"
+
+#ls -tr 80S* > list.txt #to be edited and checked!
+if [[ ! -f list.txt ]]; then
+echo "File list.txt not found! Exiting.." && exit 1
+else :
+fi
+raw=`cat list.txt | grep raw | wc -l`
+# Create new file handle 5
+exec 5< list.txt
+# Now you can use "<&5" to read from this file
+while read line1 <&5 ; do
+        read line2 <&5
+        read line3 <&5
+        read line4 <&5
+#check if all raw files has n0/n1/n2 names, tif file has correct extension and number of raw file is divisible by 3
+if `echo "${line1}" | grep -q '_n0'` && `echo "${line2}" | grep -q '_n1'` && `echo "${line3}" | grep -q '_n2'` && `echo "${line4}" | grep -q '.tif'` && ((raw%3==0))
+then
+name=`echo ${line1} | sed -e 's/_n0.raw//'`
+#rename tif file accordingly
+mv ${line4} ${name}.tif 
+echo "Next 4 images seem to be correct! Continue.."
+for k in `seq 0 2`
+do
+$em2em <<EOF 
+2D
+FEI_RAW_IMAGE
+MRC
+SINGLE_IMAGE_FILE
+NO
+${name}_n${k}
+${name}_n${k}.mrc
+YES
+KEEP_DENSITY_VALUES
+NAME_OF_IMPORT_FILES
+EOF
+#Normalize all 3 frames and append to stack
+e2proc2d.py ${name}_n${k}.mrc ${name}_stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4
+done
+
+#Convert average tif image to mrc, rotate 90deg clockwise, normalize, remove X-ray pixels and append to stack
+e2proc2d.py ${name}.tif ${name}_stack.img --rotate=90 --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4
+
+#Convert stack.img to stack mrc, since EMAN2 can't write mrc stacks
+$em2em <<EOF 
+2D
+IMG
+MRC
+STACKED_IMAGE_FILE
+${name}_stack
+${name}_stack.mrc
+YES
+KEEP_DENSITY_VALUES
+NAME_OF_IMPORT_FILES
+EOF
+rm -f ${name}_stack.img ${name}_stack.hed
+
+#Run motion correction for mrc stack, output corrected stack and sum of frames
+${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc
+else echo "Error in list.txt file! Exiting.." && break
+fi
+done
+# Close file handle 5
+exec 5<&-
