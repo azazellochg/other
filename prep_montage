@@ -1,6 +1,7 @@
 #!/bin/bash
 export IMAGIC_BATCH=1
-echo "This script produces mount images from spotscan images and also perform block convolution"
+IMAGIC_ROOT="/home/imagic/imagic_110308_64"
+echo "This script produces mount images from spotscan tif images and also perform block convolution"
 echo "Enter pixel size: "
 read pix
 echo "Number of images along X-axis (vertical in IMAGIC) was: "
@@ -20,7 +21,7 @@ do
 echo "! "
 echo "! IMAGIC program: em2em ------------------------------------------------"
 echo "! "
-/home/imagic/imagic_110308_64/stand/em2em.e <<EOF
+${IMAGIC_ROOT}/stand/em2em.e <<EOF
 TIFF
 IMAGIC
 NO
@@ -37,7 +38,7 @@ EOF
 echo "! "
 echo "! IMAGIC program: incnorvar --------------------------------------------"
 echo "! "
-/home/imagic/imagic_110308_64/incore/incnorvar.e <<EOF
+${IMAGIC_ROOT}/incore/incnorvar.e <<EOF
 WHOLE
 serie${a}raw
 serie${a}
@@ -47,7 +48,7 @@ rm "serie${a}raw.*";
 echo "! "
 echo "! IMAGIC program: mount ------------------------------------------------"
 echo "! "
-/home/imagic/imagic_110308_64/stand/mount.e <<EOF
+${IMAGIC_ROOT}/stand/mount.e <<EOF
 serie${a}
 mount${a}
 2D
@@ -57,7 +58,7 @@ EOF
 echo "! "
 echo "! IMAGIC program: block2d ----------------------------------------------"
 echo "! "
-/home/imagic/imagic_110308_64/block/block2d.e <<EOF
+${IMAGIC_ROOT}/block/block2d.e <<EOF
 mount${a}
 block${a}
 LOW
@@ -66,7 +67,7 @@ EOF
 echo "! "
 echo "! IMAGIC program: em2em ------------------------------------------------"
 echo "! "
-/home/imagic/imagic_110308_64/stand/em2em.e <<EOF
+${IMAGIC_ROOT}/stand/em2em.e <<EOF
 IMAGIC
 MRC
 SIN
@@ -80,7 +81,7 @@ EOF
 echo "! "
 echo "! IMAGIC program: em2em ------------------------------------------------"
 echo "! "
-/home/imagic/imagic_110308_64/stand/em2em.e <<EOF
+${IMAGIC_ROOT}/stand/em2em.e <<EOF
 IMAGIC
 MRC
 SIN
@@ -93,5 +94,5 @@ YES
 EOF
 done
 else
-echo "Wrong number!"
+echo "Wrong number! Exiting"
 fi
