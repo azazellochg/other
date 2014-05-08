@@ -42,6 +42,7 @@ NAME_OF_IMPORT_FILES
 EOF
 #Normalize all 3 frames and append to stack
 e2proc2d.py ${name}_n${k}.mrc ${name}_stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4
+rm -f ${name}_n${k}.mrc
 done
 
 #Convert average tif image to mrc, rotate 90deg clockwise, normalize, remove X-ray pixels and append to stack
