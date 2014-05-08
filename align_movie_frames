@@ -1,13 +1,12 @@
 #!/bin/bash
 
-#put your path to em2em
-em2em='/home9/sharov/soft/imsc_em2em_fsc/em2em_linux.sh -t'
+em2em='/home/sharov/soft/imsc_em2em_fsc/em2em_linux.sh -t'
 #Don't forget to source your eman2!
 source ~/eman.rc
 #Correct path to motioncorrect program!
-movie_soft_path="$PWD"
+movie_soft_path="/home/sharov/soft/movie"
+#list.txt has to be edited and checked!
 
-#ls -tr 80S* > list.txt #to be edited and checked!
 if [[ ! -f list.txt ]]; then
 echo "File list.txt not found! Exiting.." && exit 1
 else :
