@@ -2,7 +2,7 @@
 
 em2em='/home/sharov/soft/imsc_em2em_fsc/em2em_linux.sh -t'
 #Don't forget to source your eman2!
-source ~/eman.rc
+source /usr/local/EMAN2/EMAN2.07/eman2.bashrc
 #Correct path to motioncorrect program!
 movie_soft_path="/home/sharov/soft/movie"
 #list.txt has to be edited and checked!
