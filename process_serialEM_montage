@@ -41,7 +41,7 @@ COPS=`echo "scale=3; $PS*$CO" | bc`
 echo -n "Put a mask on power spectrum up to first zero (A): [20]"
 read RES
 RES=${RES:-20}
-rad=$((COPS*2/RES))
+rad=`echo "scale=2;${COPS}*2/${RES}" | bc
 else
 echo "It is not a SerialEM mdoc file!" && exit 1
 fi
