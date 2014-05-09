@@ -3,7 +3,7 @@ other
 
 ###Other bash scripts
 
-####prep_montage
+#####prep_montage
 
 This script produces mount (both img and mrc) images from spotscan images (acquired on CM120) and also perform block convolution with low-pass filtering
 
