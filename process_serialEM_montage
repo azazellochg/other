@@ -1,0 +1,186 @@
+#!/bin/bash
+export IMAGIC_BATCH=1
+echo " "
+echo " ====================================="
+echo " Batch to process SerialEM mrc stacks:
+        create a stack of tiff raw data and
+            a stack of power spectrums      "
+echo " ====================================="
+### Creating working directories and getting important values ###
+UpperThres=7
+LowerThres=0
+mkdir power 2>/dev/null
+mkdir raw 2>/dev/null
+docfile=`ls -l *.mdoc | head -1 | awk '{print $9}'`
+if cat $docfile | grep "SerialEM: Digitized by Gatan Camera on T20" &> /dev/null
+then
+mag=`cat $docfile  | grep "Magnification" | uniq | sed -e 's/[^0-9]*//g'`
+case "$mag" in
+"25000" )
+PixSize=4.27
+;;
+"29000" )
+PixSize=3.65
+;;
+"50000" )
+PixSize=2.12
+;;
+"62000" )
+PixSize=1.71
+esac
+echo -en "Acceleration voltage [200]: "
+read acc
+PS=${acc:-200}
+echo -en "Pixel spacing (uncoarsened!) [${PixSize}]: "
+read PS
+PS=${PS:-$PixSize}
+echo -en "Coarsening factor [2]: "
+read CO
+CO=${CO:-2}
+COPS=`echo "scale=3; $PS*$CO" | bc`
+echo -n "Put a mask on power spectrum up to first zero (A): [20]"
+read RES
+RES=${RES:-20}
+rad=$((COPS*2/RES))
+else
+echo "It is not a SerialEM mdoc file!" && exit 1
+fi
+echo "`date`
+Pixel size (uncoarsened) was: $PS
+Coarsening factor was: $CO
+Micrographs converted:" > output.log
+### Converting mrc SerialEM stacks to tiff files and renaming them to img*.tif ###
+for i in `ls *.mrc | sed -e "s/.mrc//g"`
+do
+	if [ ! -e "${i}.mrc.mdoc" ]
+		then
+		echo "No corresponding mdoc file found for ${i}.mrc!" && exit 1
+	fi
+	source /home/platform/IMOD/IMOD-linux.sh
+	mrc2tif ${i}.mrc raw/${i}
+done
+#Enter raw directory
+cd raw
+count=1
+for i in `ls *.tif | sed -e 's/.tif//g'`
+do
+	mv ${i}.tif img${count}.tif
+	((count++))
+done
+### Start processing of tif files in raw directory ###
+for a in `ls img*.tif | sed -e 's/.tif//g'`
+do
+echo ${a}.tif >> ../output.log
+################################
+# Modify it with the different #
+#    new Imagic versions       #
+################################
+echo "! "
+echo "! IMAGIC program: em2em ----------Convert tiff to img--------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/em2em.e <<EOF
+TIFF
+IMAGIC
+NO
+NO
+${a}
+unco${a}
+${PS}
+0
+EOF
+if [ "$CO" != "1" ]
+then
+temp="co${a}"
+echo "! "
+echo "! IMAGIC program: coarse ---------------Coarse if necessary-------------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/coarse.e <<EOF
+unco${a}
+co${a}
+${CO}
+EOF
+else
+temp="unco${a}"
+fi
+echo "! "
+echo "! IMAGIC program: em2em --------------------Convert img to spider format----"
+echo "! "
+/home/imagic/imagic_110308_64/stand/em2em.e <<EOF
+IMAGIC
+SPIDER
+MULT
+2D
+${temp}
+${a}.spi
+LINUX
+EOF
+### Do initial CTF estimation with Bsoft, create power spectrums ###
+bctf -verbose 7 -action prepfit -sampling ${COPS} -Cs 2.0 -Volt 200 -Amplitude 0.14 -output ${a}.star ${a}.spi >> output.log 2>&1
+mv ${a}_ps.spi ../power/
+rm -f ${a}.spi
+### Append all power spectrums to one stack, threshold it and mask
+echo "! "
+echo "! IMAGIC program: em2em -----------Convert power spectrums to img-------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/em2em.e <<EOF
+SPIDER
+MULTIPLE_LOCATION_FILE
+IMAGIC
+2D
+../power/${a}_ps.spi
+../power/del
+${COPS}
+0
+EOF
+echo "! "
+echo "! IMAGIC program: append -----------Append all spectrums to stack-------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/append.e <<EOF
+../power/del
+../power/pow-stack
+EOF
+rm -f ../power/del.*
+rm -f ../power/${a}_ps.spi
+done
+cd ..
+echo "! "
+echo "! IMAGIC program: arithm --------------Threshold the stack------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/arithm.e <<EOF
+power/pow-stack
+power/pow-stack-t
+THRESHOLD
+BOTH
+FIXED_DENSITY
+$UpperThres
+$LowerThres
+USE_THRESHOLD
+EOF
+echo "! "
+echo "! IMAGIC program: testim -------------Create a mask-------------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/testim.e <<EOF
+power/mask
+512,512
+REAL
+DISC
+${rad}
+EOF
+echo "! "
+echo "! IMAGIC program: arithm ------------Invert densities in the mask------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/arithm.e <<EOF
+power/mask
+power/mask-inv
+INVERT
+LOCAL
+EOF
+echo "! "
+echo "! IMAGIC program: twoimag ---------Apply the mask----------------"
+echo "! "
+/home/imagic/imagic_110308_64/stand/twoimag.e MODE MULTIPLY <<EOF
+power/pow-stack-t
+power/mask-inv
+power/pow-stack-t-masked
+EOF
+echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)"
