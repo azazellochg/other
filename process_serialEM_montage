@@ -115,7 +115,8 @@ ${a}.spi
 LINUX
 EOF
 ### Do initial CTF estimation with Bsoft, create power spectrums ###
-bctf -verbose 7 -action prepfit -sampling ${COPS} -Cs 2.0 -Volt 200 -Amplitude 0.14 -output ${a}.star ${a}.spi >> output.log 2>&1
+source /home/platform/bsoft/bsoft/bsoft.bashrc
+bctf -verbose 7 -action prepfit -sampling ${COPS} -Cs 2.0 -Volt 200 -Amplitude 0.14 -output ${a}.star ${a}.spi >> ../output.log 2>&1
 mv ${a}_ps.spi ../power/
 rm -f ${a}.spi
 ### Append all power spectrums to one stack, threshold it and mask
