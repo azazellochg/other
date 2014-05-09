@@ -64,6 +64,9 @@ rm -f ${name}_stack.img ${name}_stack.hed
 
 #Run motion correction for mrc stack, output corrected stack and sum of frames
 ${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc
+if [[ $? -ne 0 ]]; then
+    echo "${name}.tif" >> bad_micrographs.plt
+fi
 else echo "Error in list.txt file! Exiting.." && break
 fi
 done
