@@ -36,10 +36,10 @@ PS=${acc:-200}
 echo -en "Pixel spacing (uncoarsened!) [${PixSize}]: "
 read PS
 PS=${PS:-$PixSize}
-echo -en "Coarsening factor [2]: "
+echo -en "Coarsening factor [4]: "
 read CO
 [ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
-CO=${CO:-2}
+CO=${CO:-4}
 COPS=`echo "scale=3;$PS*$CO" | bc`
 echo -n "Put a mask on power spectrum up to first zero (A): [20]"
 read RES
