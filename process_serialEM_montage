@@ -1,5 +1,10 @@
 #!/bin/bash
 export IMAGIC_BATCH=1
+###process_serialEM_montage.sh  Copyright (C) 2014  Grigory Sharov
+###This program comes with ABSOLUTELY NO WARRANTY.
+###This is free software, and you are welcome to redistribute it
+###under GNU GENERAL PUBLIC LICENSE Version 3.
+
 echo -e "Batch to process SerialEM mrc stacks: create a stack of tiff raw data and a stack of power spectrums\n"
 source /home/platform/IMOD/IMOD-linux.sh
 source /home/platform/EMAN/eman.bashrc
