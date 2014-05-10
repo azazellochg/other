@@ -10,7 +10,7 @@ This script produces mount (both img and mrc) images from spotscan images (acqui
 ---
 #####process_serialEM_montage
 
-The script will split SerialEM mrc stacks (acquired on F20) into tiff files, estimate CTF for each image and produce a stack of power spectrums, thresholded and masked.
+The script will split SerialEM mrc stacks (acquired on F20) into tiff files and produce a stack of power spectrums, thresholded and masked.
 
 ---
 #####spotscan_clean_boxes
