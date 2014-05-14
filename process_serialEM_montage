@@ -32,7 +32,7 @@ PixSize=1.71
 esac
 echo -en "Acceleration voltage [200]: "
 read acc
-PS=${acc:-200}
+acc=${acc:-200}
 echo -en "Pixel spacing (uncoarsened!) [${PixSize}]: "
 read PS
 PS=${PS:-$PixSize}
