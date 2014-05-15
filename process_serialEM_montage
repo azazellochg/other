@@ -32,18 +32,18 @@ PixSize=1.71
 esac
 echo -en "Acceleration voltage [200]: "
 read acc
-acc=${acc:-200}
+: acc=${acc:=200}
 echo -en "Pixel spacing (uncoarsened!) [${PixSize}]: "
 read PS
-PS=${PS:-$PixSize}
+: PS=${PS:=$PixSize}
 echo -en "Coarsening factor [4]: "
 read CO
 [ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
-CO=${CO:-4}
+: CO=${CO:=4}
 COPS=`echo "scale=3;$PS*$CO" | bc`
 echo -n "Put a mask on power spectrum up to first zero (A): [20]"
 read RES
-RES=${RES:-20}
+: RES=${RES:=20}
 rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
 else
 echo "It is not a SerialEM mdoc file!" && exit 1
