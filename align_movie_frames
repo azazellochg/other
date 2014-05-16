@@ -7,6 +7,7 @@ source /usr/local/EMAN2/EMAN2.07/eman2.bashrc
 movie_soft_path="/home/sharov/soft/movie"
 #list.txt has to be edited and checked!
 
+[ -f align_movie_frames.log ] && rm -f align_movie_frames.log
 if [[ ! -f list.txt ]]; then
 echo "File list.txt not found! Exiting.." && exit 1
 else :
