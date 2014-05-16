@@ -33,9 +33,9 @@ date_tif_s=`date -d "${date_tif}" '+%s'`
 diff=$((date_tif_s-date_raw_s))
 if [ ${diff} -gt 5 -a ${diff} -lt 9 ];then
 echo "Tif: ${k}.tif"
-echo "${i}n0.raw" >> list.txt
-echo "${i}n1.raw" >> list.txt
-echo "${i}n2.raw" >> list.txt
+echo "${i}_n0.raw" >> list.txt
+echo "${i}_n1.raw" >> list.txt
+echo "${i}_n2.raw" >> list.txt
 echo "${k}.tif" >> list.txt
 else :
 fi
