@@ -1,0 +1,69 @@
+#!/bin/bash
+#The script looks for raw and tif files in current directory (including subdirectories) and produces a list.txt: frames/average tif
+
+[ -f list.txt ] && rm -f list.txt
+#sort all files by numbers in the name (date/time)
+find . -name *.raw | sort -n > list_raw
+find . -name *.tif | sort -n > list_tif
+#check if we have 3 frames indeed
+num1=`wc -l list_raw | awk '{print $1}'`
+num2=`cat list_raw | sed 's/n0//g;s/n1//g;s/n2//g' | uniq | wc -l | awk '{print $1}'`
+if [[ ${num1} == $((num2*3)) ]];then
+:
+else echo "Number of raw files is not divisible by 3! Not 3 frames?" && exit 1
+fi
+#check if we have 1 tif per group of 3 frames
+num3=`wc -l list_tif | awk '{print $1}'`
+if [[ ${num3} == ${num2} ]];then
+:
+else echo "Number of tif files per group of 3 frames is incorrect!" && exit 1
+fi
+#unify raw file list
+cat list_raw | sed 's/n0//g;s/n1//g;s/n2//g;s/.raw//g' | uniq > list2_raw
+#convert names to date format in seconds
+echo "Table of corresponding files:"
+for i in `cat list2_raw`;do
+date_raw=`echo $i | sed -e 's/.*Image_\(.*\)_$/\1/;s/_/ /g;s/.\{4\}/&-/;s/.\{7\}/&-/;s/.\{13\}/&:/;s/.\{16\}/&:/;'`
+date_raw_s=`date -d "${date_raw}" '+%s'`
+echo -n "Frames: ${i}n*.raw || "
+#process tif file list for comparison
+for k in `cat list_tif | sed 's/.tif//g'`;do
+date_tif=`echo $k | sed -e 's/^.*\(...............\)$/\1/;s/_/ /g;s/.\{4\}/&-/;s/.\{7\}/&-/;s/.\{13\}/&:/;s/.\{16\}/&:/;'`
+date_tif_s=`date -d "${date_tif}" '+%s'`
+diff=$((date_tif_s-date_raw_s))
+if [ ${diff} -gt 5 -a ${diff} -lt 9 ];then
+echo "Tif: ${k}.tif"
+echo "${i}n0.raw" >> list.txt
+echo "${i}n1.raw" >> list.txt
+echo "${i}n2.raw" >> list.txt
+echo "${k}.tif" >> list.txt
+else :
+fi
+done
+done
+#save list.txt if required
+echo -en "\nDo you want to save this list? (y/n) "
+read Ans
+case $Ans in
+y|Y|YES|yes|Yes)
+ ans=1
+ ;;
+n|N|NO|no|No)
+ ans=0
+ ;;
+*)
+ echo "Please enter only y or n! Aborting." && exit 1
+ ;;
+esac
+case $ans in
+1)
+ echo "list.txt:"
+ cat list.txt
+ ;;
+0)
+ echo "Aborting.."
+ rm -f list.txt
+ ;;
+esac
+#clean up
+rm -f list_raw list2_raw list_tif
