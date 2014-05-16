@@ -20,15 +20,16 @@ while read line1 <&5 ; do
         read line3 <&5
         read line4 <&5
 #check if all raw files has n0/n1/n2 names, tif file has correct extension and number of raw file is divisible by 3
+#start of main part
 if `echo "${line1}" | grep -q '_n0'` && `echo "${line2}" | grep -q '_n1'` && `echo "${line3}" | grep -q '_n2'` && `echo "${line4}" | grep -q '.tif'` && ((raw%3==0))
 then
 name=`echo ${line1} | sed -e 's/_n0.raw//'`
 #rename tif file accordingly
-mv ${line4} ${name}.tif 
-echo "Next 4 images seem to be correct! Continue.."
+cp ${line4} ${name}.tif >> align_movie_frames.log 2>&1
+echo "Next 4 images seem to be correct! Continue.." >> align_movie_frames.log 2>&1
 for k in `seq 0 2`
 do
-$em2em <<EOF 
+$em2em <<EOF >> align_movie_frames.log
 2D
 FEI_RAW_IMAGE
 MRC
@@ -41,15 +42,15 @@ KEEP_DENSITY_VALUES
 NAME_OF_IMPORT_FILES
 EOF
 #Normalize all 3 frames and append to stack
-e2proc2d.py ${name}_n${k}.mrc ${name}_stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4
-rm -f ${name}_n${k}.mrc
+e2proc2d.py ${name}_n${k}.mrc ${name}_stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 >> align_movie_frames.log 2>&1
+rm -f ${name}_n${k}.mrc >> align_movie_frames.log 2>&1
 done
 
 #Convert average tif image to mrc, rotate 90deg clockwise, normalize, remove X-ray pixels and append to stack
-e2proc2d.py ${name}.tif ${name}_stack.img --rotate=90 --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4
+e2proc2d.py ${name}.tif ${name}_stack.img --rotate=90 --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 >> align_movie_frames.log 2>&1
 
 #Convert stack.img to stack mrc, since EMAN2 can't write mrc stacks
-$em2em <<EOF 
+$em2em <<EOF >> align_movie_frames.log
 2D
 IMG
 MRC
@@ -60,15 +61,21 @@ YES
 KEEP_DENSITY_VALUES
 NAME_OF_IMPORT_FILES
 EOF
-rm -f ${name}_stack.img ${name}_stack.hed
+rm -f ${name}_stack.img ${name}_stack.hed >> align_movie_frames.log 2>&1
 
 #Run motion correction for mrc stack, output corrected stack and sum of frames
-${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc
+${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc -gpu 0 >> align_movie_frames.log 2>&1
 if [[ $? -ne 0 ]]; then
-    echo "${name}.tif" >> bad_micrographs.plt
+	echo -n "Retrying on other GPU..." | tee -a align_movie_frames.log
+	${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc -gpu 1 >> align_movie_frames.log 2>&1
+	if [[ $? -ne 0 ]]; then
+		echo "Well, second attempt has failed as well..." | tee -a align_movie_frames.log
+		echo "${name}.tif" >> bad_micrographs.plt
+	else echo "worked!"
+	fi
 fi
 else echo "Error in list.txt file! Exiting.." && break
-fi
+fi # main part finished
 done
 # Close file handle 5
 exec 5<&-
