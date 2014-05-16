@@ -1,4 +1,8 @@
 #!/bin/bash
+###align_movie_frames.sh  Copyright (C) 2014  Grigory Sharov
+###This program comes with ABSOLUTELY NO WARRANTY.
+###This is free software, and you are welcome to redistribute it
+###under GNU GENERAL PUBLIC LICENSE Version 3.
 
 em2em='/home/sharov/soft/imsc_em2em_fsc/em2em_linux.sh -t'
 #Don't forget to source your eman2!
