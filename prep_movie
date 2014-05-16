@@ -3,8 +3,8 @@
 
 [ -f list.txt ] && rm -f list.txt
 #sort all files by numbers in the name (date/time)
-find . -name *.raw | sort -n > list_raw
-find . -name *.tif | sort -n > list_tif
+find . -name '*.raw' | sort -n > list_raw
+find . -name '*.tif' | sort -n > list_tif
 #check if we have 3 frames indeed
 num1=`wc -l list_raw | awk '{print $1}'`
 num2=`cat list_raw | sed 's/n0//g;s/n1//g;s/n2//g' | uniq | wc -l | awk '{print $1}'`
