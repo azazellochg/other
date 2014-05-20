@@ -11,14 +11,40 @@ source /usr/local/EMAN2/EMAN2.07/eman2.bashrc
 movie_soft_path="/home/sharov/soft/movie"
 #list.txt has to be edited and checked!
 
+[ -f bad_micrographs.plt ] && rm -f bad_micrographs.plt
 [ -f align_movie_frames.log ] && rm -f align_movie_frames.log
 if [[ ! -f list.txt ]]; then
 echo "File list.txt not found! Exiting.." && exit 1
 else :
 fi
-raw=`cat list.txt | grep raw | wc -l`
+`ls list.txt.* &> /dev/null` && rm -f list.txt.*
+total=`cat list.txt | wc -l`
+group_max=$((total/4))
+#ask for parallel processing and cut input list.txt file accordingly
+echo "Script will optimize the number of processes itself after you specify the approximate number:)"
+echo -n "How many parallel processes you want to use ($group_max max)? [2] "
+read procs
+: procs={$procs:=1}
+case $procs in
+    ''|*[!0-9]*) echo "Error: not a number!" & exit 1;;
+    *) : ;;
+esac
+( (("$procs" > "24")) || (("$procs" < "1" )) ) && echo "Wrong number!" && exit 1
+(("$procs" > "$group_max" )) && echo "You cannot set more than $group_max processes: list.txt is not big enough!" && exit 1
+((lines_per_part = 4*((group_max + procs - 1) / procs)))
+split --lines=${lines_per_part} list.txt list.txt.
+echo "Total files to treat    = ${total}"
+echo "Files per process (avg) = ${lines_per_part}"    
+wc -l list.txt.*
+num=`ls list.txt.* | wc -l`
+cmd=`/bin/ls list.txt.*`
+echo "Starting $num parallel processes..."
+
+work () {
+
+raw=`cat $1 | grep raw | wc -l`
 # Create new file handle 5
-exec 5< list.txt
+exec 5< $1
 # Now you can use "<&5" to read from this file
 while read line1 <&5 ; do
         read line2 <&5
@@ -30,11 +56,11 @@ if `echo "${line1}" | grep -q '_n0'` && `echo "${line2}" | grep -q '_n1'` && `ec
 then
 name=`echo ${line1} | sed -e 's/_n0.raw//'`
 #rename tif file accordingly
-cp ${line4} ${name}.tif >> align_movie_frames.log 2>&1
-echo "Next 4 images seem to be correct! Continue.." >> align_movie_frames.log 2>&1
+cp ${line4} ${name}.tif >> align_movie_frames_$2.log 2>&1
+echo "Next 4 images seem to be correct! Continue.." >> align_movie_frames_$2.log 2>&1
 for k in `seq 0 2`
 do
-$em2em <<EOF >> align_movie_frames.log
+$em2em <<EOF > /dev/null
 2D
 FEI_RAW_IMAGE
 MRC
@@ -46,16 +72,18 @@ YES
 KEEP_DENSITY_VALUES
 NAME_OF_IMPORT_FILES
 EOF
+[ $? -eq 0 ] && echo "${name}_n${k} has been converted from fei_raw to mrc" >> align_movie_frames_$2.log
 #Normalize all 3 frames and append to stack
-e2proc2d.py ${name}_n${k}.mrc ${name}_stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 >> align_movie_frames.log 2>&1
-rm -f ${name}_n${k}.mrc >> align_movie_frames.log 2>&1
+e2proc2d.py ${name}_n${k}.mrc ${name}_stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 > /dev/null 2>&1
+[ $? -eq 0 ] && echo "${name}_n${k}.mrc has been added to imagic stack ${name}_stack.img" >> align_movie_frames_$2.log
+rm -f ${name}_n${k}.mrc > /dev/null 2>&1
 done
 
 #Convert average tif image to mrc, rotate 90deg clockwise, normalize, remove X-ray pixels and append to stack
-e2proc2d.py ${name}.tif ${name}_stack.img --rotate=90 --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 >> align_movie_frames.log 2>&1
-
+e2proc2d.py ${name}.tif ${name}_stack.img --rotate=90 --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 > /dev/null 2>&1
+[ $? -eq 0 ] && echo "${name}.tif has been added to imagic stack ${name}_stack.img" >> align_movie_frames_$2.log
 #Convert stack.img to stack mrc, since EMAN2 can't write mrc stacks
-$em2em <<EOF >> align_movie_frames.log
+$em2em <<EOF > /dev/null
 2D
 IMG
 MRC
@@ -66,16 +94,17 @@ YES
 KEEP_DENSITY_VALUES
 NAME_OF_IMPORT_FILES
 EOF
-rm -f ${name}_stack.img ${name}_stack.hed >> align_movie_frames.log 2>&1
+[ $? -eq 0 ] && echo "${name}.tif has been added to imagic stack ${name}_stack.img" >> align_movie_frames_$2.log
+rm -f ${name}_stack.img ${name}_stack.hed >> align_movie_frames_$2.log 2>&1
 
 #Run motion correction for mrc stack, output corrected stack and sum of frames
-${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc -gpu 0 >> align_movie_frames.log 2>&1
+${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc -gpu 0 >> align_movie_frames_$2.log 2>&1
 if [[ $? -ne 0 ]]; then
-	echo -n "Retrying on other GPU..." | tee -a align_movie_frames.log
-	${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc -gpu 1 >> align_movie_frames.log 2>&1
+	echo -n "Retrying on other GPU..." | tee -a align_movie_frames_$2.log
+	${movie_soft_path}/motioncorr ${name}_stack.mrc -fod 1 -fcs ${name}_sum_corr.mrc -fct ${name}_stack_corr.mrc -gpu 1 >> align_movie_frames_$2.log 2>&1
 	if [[ $? -ne 0 ]]; then
-		echo "Well, second attempt has failed as well..." | tee -a align_movie_frames.log
-		echo "${name}.tif" >> bad_micrographs.plt
+		echo "Well, second attempt has failed as well..." | tee -a align_movie_frames_$2.log
+		echo "${name}.tif" >> bad_micrographs_$2.plt
 	else echo "worked!"
 	fi
 fi
@@ -84,3 +113,27 @@ fi # main part finished
 done
 # Close file handle 5
 exec 5<&-
+}
+
+parallelize () {
+	key=1
+	while [ $# -gt 0 ] ; do
+		jobcnt=(`jobs -pr`)
+		if [ ${#jobcnt[@]} -lt $num ] ; then
+			(echo "Starting process $key... input = $1"; work $1 $key; echo "Process $key of ${num} has finished") &
+			shift
+			((key++))
+		fi
+	done
+	wait
+}
+
+parallelize ${cmd}
+#join all log files
+cmd2=`ls align_movie_frames_*.log | sort`
+cmd3=`ls bad_micrographs_*.plt | sort`
+cat $cmd2 > align_movie_frames.log 
+rm -f align_movie_frames_*.log
+cat $cmd3 > bad_micrographs.plt
+rm -f bad_micrographs_*.plt
+echo "All processes has finished!"
