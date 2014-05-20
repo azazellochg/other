@@ -56,7 +56,7 @@ if `echo "${line1}" | grep -q '_n0'` && `echo "${line2}" | grep -q '_n1'` && `ec
 then
 name=`echo ${line1} | sed -e 's/_n0.raw//'`
 #rename tif file accordingly
-cp ${line4} ${name}.tif >> align_movie_frames_$2.log 2>&1
+mv ${line4} ${name}.tif >> align_movie_frames_$2.log 2>&1
 echo "Next 4 images seem to be correct! Continue.." >> align_movie_frames_$2.log 2>&1
 for k in `seq 0 2`
 do
