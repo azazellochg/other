@@ -3,9 +3,19 @@ other
 
 ###Other bash scripts
 
+#####align_movie_frames
+
+Script reads list.txt produced by prep_movie script and split it for parallel processing on CPU/GPU. Frames and average image will be converted to mrc format, aligned and summed by motioncorr program.
+
+---
 #####prep_montage
 
 This script produces mount (both img and mrc) images from spotscan images (acquired on CM120) and also perform block convolution with low-pass filtering
+
+---
+#####prep_movie
+
+The script looks for raw and tif files in current directory (including subdirectories) and produces a list.txt: frames/average tif
 
 ---
 #####process_serialEM_montage
