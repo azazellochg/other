@@ -6,15 +6,15 @@ export IMAGIC_BATCH=1
 ###under GNU GENERAL PUBLIC LICENSE Version 3.
 
 echo -e "Batch to process SerialEM mrc stacks: create a stack of tiff raw data and a stack of power spectrums\n"
-source /home/platform/IMOD/IMOD-linux.sh
-source /home/platform/EMAN/eman.bashrc
-source /home/sharov/soft/EMAN2-270414/eman2.bashrc
+#source your EMAN2 bashrc file here!
+source ~/eman21.rc # EMAN2.1-beta
+######################################
 UpperThres=7
 LowerThres=0
 mkdir power 2>/dev/null
 mkdir raw 2>/dev/null
 docfile=`ls -l *.mdoc | head -1 | awk '{print $9}'`
-if cat $docfile | grep "SerialEM: Digitized by Gatan Camera on T20" &> /dev/null
+if cat $docfile | grep "SerialEM: Digitized by Gatan Camera on TF20" &> /dev/null
 then
 mag=`cat $docfile  | grep "Magnification" | uniq | sed -e 's/[^0-9]*//g'`
 case "$mag" in
@@ -59,16 +59,15 @@ do
 		then
 		echo "No corresponding mdoc file found for ${i}.mrc!" && exit 1
 	fi
-	echo -en "Writing tif images.\r"
-	mrc2tif ${i}.mrc raw/${i} &> /dev/null
-	echo -en "Writing tif images\r"
+	echo -en "Writing tif images...\r"
+	e2proc2d.py ${i}.mrc raw/${i}.tif --unstacking --threed2twod &> /dev/null
 done
 echo -en "Writing tif images..DONE!\n"
 count=1
 echo -en "Renaming tif images.\r"
-for i in `ls raw/*.tif | sed -e 's/raw\///g;s/.tif//g'`
+for i in `ls raw/*.tif`
 do
-	mv raw/${i}.tif raw/img${count}.tif
+	mv ${i} raw/img${count}.tif
 	((count++))
 	echo -en "Renaming tif images\r"
 done
@@ -90,35 +89,10 @@ e2proc2d.py raw/${a}.tif power/pow-stack.img --process=normalize.edgemean --proc
 ((count2++))
 fi
 done
-echo -en "\nMasking power spectrums.."
-/home/imagic/imagic_110308_64/stand/arithm.e <<EOF >> output.log
-power/pow-stack
-power/pow-stack-t
-THRESHOLD
-BOTH
-FIXED_DENSITY
-$UpperThres
-$LowerThres
-USE_THRESHOLD
-EOF
-size=`iminfo power/pow-stack.img | grep "Image(s) are" | awk '{print $3}'| cut -d'x' -f1`
-/home/imagic/imagic_110308_64/stand/testim.e <<EOF >> output.log
-power/mask
-${size},${size}
-REAL
-DISC
-${rad}
-EOF
-/home/imagic/imagic_110308_64/stand/arithm.e <<EOF >> output.log
-power/mask
-power/mask-inv
-INVERT
-LOCAL
-EOF
-/home/imagic/imagic_110308_64/stand/twoimag.e MODE MULTIPLY <<EOF >> output.log
-power/pow-stack-t
-power/mask-inv
-power/pow-stack-t-masked
-EOF
+echo -en "\nMasking power spectrums.." | tee -a output.log
+e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log
+size=`e2iminfo.py power/pow-stack.img | grep "in IMAGIC format" | awk '{print $7}'`
+rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
+e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log
 echo "DONE!"
 echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)"
