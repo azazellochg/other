@@ -41,10 +41,24 @@ read CO
 [ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
 : CO=${CO:=4}
 COPS=`echo "scale=3;$PS*$CO" | bc`
-echo -n "Put a mask on power spectrum up to first zero (A): [20]"
-read RES
-: RES=${RES:=20}
-rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
+echo -n "Mask power spectrums? [y] "
+read ans
+: ans=${ans:="y"}
+ans2=0
+case $ans in
+Y|y)
+	echo -n "Put a mask on power spectrum up to first zero (A): [20] "
+	read RES
+	: RES=${RES:=20}
+	rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
+	;;
+N|n)
+	ans2=1
+	;;
+*)
+	echo "Wrong answer!" && exit 1
+	;;
+esac
 else
 echo "It is not a SerialEM mdoc file!" && exit 1
 fi
@@ -91,8 +105,10 @@ fi
 done
 echo -en "\nMasking power spectrums.." | tee -a output.log
 e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log
+if [ ${ans2} -eq 1 ];then
 size=`e2iminfo.py power/pow-stack.img | grep "in IMAGIC format" | awk '{print $7}'`
 rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
 e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log
+fi
 echo "DONE!"
 echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)"
