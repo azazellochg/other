@@ -81,7 +81,7 @@ echo ${a}.tif >> output.log
 if [ "$CO" != "1" ]
 then
 echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
-e2proc2d.py raw/${a}.tif power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --medianshrink ${CO} --process=math.realtofft >> output.log 2>&1
+e2proc2d.py raw/${a}.tif power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
 ((count2++))
 else
 echo -ne "Normalizing and calculating power spectrum: ${count2} of ${num}\r"
