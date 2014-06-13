@@ -103,9 +103,9 @@ e2proc2d.py raw/${a}.tif power/pow-stack.img --process=normalize.edgemean --proc
 ((count2++))
 fi
 done
+if [ ${ans2} -eq 1 ];then
 echo -en "\nMasking power spectrums.." | tee -a output.log
 e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log
-if [ ${ans2} -eq 1 ];then
 size=`e2iminfo.py power/pow-stack.img | grep "in IMAGIC format" | awk '{print $7}'`
 rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
 e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log
