@@ -1,0 +1,104 @@
+#!/bin/bash
+#------------------------INPUT PARAMETERS---------------------------
+prog="/usr/local/gempicker/bin/gEMpicker"
+orig="/home/sharov/test/img"
+tpl="/home/sharov/test/tpl"
+msk="/home/sharov/test/msk"
+res="/home/sharov/test/output"
+box="70"     #desired box size
+photo="1024" #size of micrograph (should be square!)
+#-------------------------------------------------------------------
+for m in 0 1
+do
+$prog --nGPU=1 --nCPU=6 --mode=$m --thresh=0.3 --dirSch=$tpl --dirTgt=$orig --dirMsk=$msk --dirRes=$res --angle2D=10 --contrast=1 --boxSize=$box
+done
+
+cd $res/pik_coord/
+if ls *.box;
+then rm -f *.box;
+else :
+fi
+
+echo -e "Enter downsampling factor: (1 - no downsampling): "
+read down
+
+for k in `ls *__piks.txt | sed -e 's/__piks.txt//g'`
+do
+  input="./${k}__piks.txt"
+  output_down="./${k}_downsampled.box"
+  output="./${k}.box"
+
+  for i in `awk '{if (NR!=1) {print $3","$4}}' $input`
+  do
+    X_down="$((($photo-`echo $i | cut -d "," -f2`)-$box/2))"
+    X="$(($X_down*$down))"
+    Y_down="$((`echo $i | cut -d "," -f1`-$box/2))"
+    Y="$(($Y_down*$down))"
+    box_orig="$(($box*$down))"
+   echo "$X $Y $box_orig $box_orig" >> $output
+   echo "$X_down $Y_down $box $box" >> $output_down
+  done
+
+done
+echo -e "\nCoordinates for EMAN1 batchboxer are in folder $res/pik_coord/*.box\n"
+
+#----------------COMMENTS-------------------------------------------
+<<comments
+
+Max size of original data is 4096x4096px
+
+Particles extracted from one micrograph are put in the same folder $Res/pik_ext/$name_of_micrograph
+
+The coordinates of extracted particles are exported in the folder $Res/pik_coord. Each text file contains coordinates in each micrograph of similar name
+
+Overlay correlation value: the correlation value for each selected particle is overlaid on the particle image in blue. The range of correlation values is also overlaid on the correlation map exported in TIFF format. 
+
+File formats: CCP4 and TIFF are fully supported. gEMpicker can read TIFF data in all single-channel formats ((signed) 8/16/32 integer, single and double precision). If you need multiple-channel TIFF, please let me know. The TIFF files exported from gEMpicker are in unsigned 8bit integer for visualization purpose only. At the moment, gEMpicker only partially supports MRC format since this format has some variants from different labs. Fully MRC support is planned for the near future.
+
+To convert dm3 to ccp4 maps use (do not forget to normalize and threshold data after, before start picking): 
+e2proc2d.py --process=xform.flip:axis=y input.dm3 output.map --outtype=mrc
+
+To box particles with EMAN1 batch boxer use:
+batchboxer dbbox=input.box input=input.map output=output.img
+
+To convert gEMpicker picked particles use the same program:
+e2proc2d.py --outtype=imagic 00xx__mask__xx__yyy.map output.img
+
+
+   --dirTgt=<string>
+     (required)  Directory of target micrographs (*.map)
+
+   --dirSch=<string>
+     (required)  Directory of search template images (*.map)
+
+   --dirMsk=<string>
+     (required)  Directory of mask images (*.tif)
+
+   --dirRes=<string>
+     (required)  Directory for results
+
+   --mode=<bool>
+     (required)  Running mode: 0-compute correlation, 1-perform picking
+
+   --thresh=<float>
+     (required)  Thresholding value for picking: [-1 1]
+
+   --angle2D=<float>
+     (required)  In-plane rotating angle in degree, (0 = no rotation)
+
+   --contrast=<bool>
+     (required)  Micrograph contrast: 0-negative peaks (cryo), 1-positive peaks (neg. stain)
+
+   --nPickMax=<unsigned int>
+     Max number of particles picked from each micrograph (0 = no limit)
+     
+   --boxSize=<unsigned int>
+     Size of picked regions (use search image size if not provided)     
+
+   --nCPU=<unsigned int>
+     Number of CPU cores
+
+   --nGPU=<unsigned int>
+     Number of GPUs
+
+comments
