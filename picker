@@ -1,13 +1,22 @@
 #!/bin/bash
+
+#Strong lowpass filter on micrographs before picking
+#for i in `seq 1 3600`;do
+#e2proc2d.py img/img${i}.tif img/img${i}.tif --inplace --process=filter.lowpass.gauss:apix=6.84:cutoff_abs=0.17 --process=normalize.edgemean
+#done
+
 #------------------------INPUT PARAMETERS---------------------------
 prog="/usr/local/gempicker/bin/gEMpicker"
-orig="/home/sharov/test/img"
-tpl="/home/sharov/test/tpl"
-msk="/home/sharov/test/msk"
-res="/home/sharov/test/output"
-box="70"     #desired box size
-photo="1024" #size of micrograph (should be square!)
+orig="$PWD/img"
+tpl="$PWD/tpl"
+msk="$PWD/msk"
+res="$PWD/output"
+box="64"     #desired box size
+photo="512" #size of micrograph (should be square!)
 #-------------------------------------------------------------------
+[ ! -d $res ] && mkdir $res
+( [ ! -d $orig ] || [ ! -d $tpl ] || [ ! -d $msk ] ) && ( echo "Some directories was not found!" && exit 1 )
+
 for m in 0 1
 do
 $prog --nGPU=1 --nCPU=6 --mode=$m --thresh=0.3 --dirSch=$tpl --dirTgt=$orig --dirMsk=$msk --dirRes=$res --angle2D=10 --contrast=1 --boxSize=$box
