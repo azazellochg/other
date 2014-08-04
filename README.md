@@ -3,7 +3,7 @@ other
 
 ###Other bash scripts
 
-#####align_movie_frames
+#####align_movie_frames - TO BE MODIFIED. a very dirty script :(
 
 Script reads list.txt produced by prep_movie script and split it for parallel processing on CPU/GPU. Frames and average image will be converted to mrc format, aligned and summed by motioncorr program.
 
@@ -18,7 +18,7 @@ The simple script to run gEMpicker software will produce EMAN1 .box files with p
 This script produces mount (both img and mrc) images from spotscan images (acquired on CM120) and also perform block convolution with low-pass filtering
 
 ---
-#####prep_movie
+#####prep_movie - TO BE MODIFIED. a very dirty script :(
 
 The script looks for raw and tif files in current directory (including subdirectories) and produces a list.txt: frames/average tif
 
