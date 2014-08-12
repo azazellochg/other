@@ -5,7 +5,7 @@ export IMAGIC_BATCH=1
 ###This is free software, and you are welcome to redistribute it
 ###under GNU GENERAL PUBLIC LICENSE Version 3.
 
-echo -e "Batch to process SerialEM mrc stacks: create a stack of tiff raw data and a stack of power spectrums\n"
+echo -e "Batch to process SerialEM mrc stacks: create a stack of mrc raw data and a stack of power spectrums\n"
 #source your EMAN2 bashrc file here!
 source ~/eman21.rc # EMAN2.1-beta
 ######################################
@@ -18,6 +18,9 @@ if cat $docfile | grep "SerialEM: Digitized by Gatan Camera on TF20" &> /dev/nul
 then
 mag=`cat $docfile  | grep "Magnification" | uniq | sed -e 's/[^0-9]*//g'`
 case "$mag" in
+"19000" )
+PixSize=5.5
+;;
 "25000" )
 PixSize=4.27
 ;;
@@ -33,10 +36,7 @@ PixSize=2.12
 "62000" )
 PixSize=1.71
 esac
-echo -en "Acceleration voltage [200]: "
-read acc
-: acc=${acc:=200}
-echo -en "Pixel spacing (uncoarsened!) [${PixSize}]: "
+echo -en "Pixel spacing (uncoarsened!) [detected ${mag}x : ${PixSize}A/px]: "
 read PS
 : PS=${PS:=$PixSize}
 echo -en "Coarsening factor [4]: "
@@ -69,49 +69,52 @@ echo "`date`
 Pixel size (uncoarsened) was: $PS
 Coarsening factor was: $CO
 Micrographs converted:" > output.log
-### Converting mrc SerialEM stacks to tiff files and renaming them to img*.tif ###
+### Converting mrc SerialEM stacks to mrc files ###
+tot=`ls *.mrc | wc -l | awk '{print $1}'`
+number=1
 for i in `ls *.mrc | sed -e "s/.mrc//g"`
 do
 	if [ ! -e "${i}.mrc.mdoc" ]
 		then
-		echo "No corresponding mdoc file found for ${i}.mrc!" && exit 1
+		echo -e "WARNING: No corresponding mdoc file found for ${i}.mrc!\n"
 	fi
-	echo -en "Writing tif images...\r"
-	e2proc2d.py ${i}.mrc raw/${i}.tif --unstacking --threed2twod &> /dev/null
+	echo -en "Writing mrc images...($number out of $tot)\r"
+	e2proc2d.py ${i}.mrc raw/${i}.mrc --unstacking --threed2twod &> /dev/null
+	((number++))
 done
-echo -en "Writing tif images..DONE!\n"
+echo -e "\nWriting mrc images..DONE!"
+### Renaming files ###
 count=1
-echo -en "Renaming tif images.\r"
-for i in `ls raw/*.tif`
+for i in `ls raw/*.mrc`
 do
-	mv ${i} raw/img${count}.tif
+	mv ${i} raw/img${count}.mrc
 	((count++))
-	echo -en "Renaming tif images\r"
+	echo -en "Renaming mrc images...\r"
 done
-echo -en "Renaming tif images..DONE!\n"
-### Start processing of tif files in raw directory ###
-num=`ls raw/img*.tif | wc -l | awk '{print $1}'`
+echo -e "Renaming mrc images..DONE!"
+### Start processing of mrc files in raw directory ###
+num=`ls raw/img*.mrc | wc -l | awk '{print $1}'`
 count2=1
-for a in `ls raw/img*.tif | sed -e 's/raw\///g;s/.tif//g'`
+for a in `ls raw/img*.mrc | sed -e 's/raw\///g;s/.mrc//g'`
 do
-echo ${a}.tif >> output.log
+echo ${a}.mrc >> output.log
 if [ "$CO" != "1" ]
 then
 echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
-e2proc2d.py raw/${a}.tif power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
+e2proc2d.py raw/${a}.mrc power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
 ((count2++))
 else
 echo -ne "Normalizing and calculating power spectrum: ${count2} of ${num}\r"
-e2proc2d.py raw/${a}.tif power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft >> output.log 2>&1
+e2proc2d.py raw/${a}.mrc power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft >> output.log 2>&1
 ((count2++))
 fi
 done
 if [ ${ans2} -eq 1 ];then
-echo -en "\nMasking power spectrums.." | tee -a output.log
+echo -en "\nMasking power spectrums..." | tee -a output.log
 e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log
 size=`e2iminfo.py power/pow-stack.img | grep "in IMAGIC format" | awk '{print $7}'`
 rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
 e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log
 fi
-echo "DONE!"
+echo -e "\nDONE!"
 echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)"
