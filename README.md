@@ -25,7 +25,7 @@ The script looks for raw and tif files in current directory (including subdirect
 ---
 #####process_serialEM_montage
 
-The script will split SerialEM mrc stacks (acquired on F20) into tiff files and produce a stack of power spectrums, thresholded and masked.
+The script will split SerialEM mrc stacks (acquired on F20) into separate mrc files and produce a stack of power spectrums, thresholded and masked.
 
 ---
 #####spotscan_clean_boxes
