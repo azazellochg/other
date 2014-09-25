@@ -19,7 +19,7 @@ photo="512" #size of micrograph (should be square!)
 
 for m in 0 1
 do
-$prog --nGPU=1 --nCPU=6 --mode=$m --thresh=0.3 --dirSch=$tpl --dirTgt=$orig --dirMsk=$msk --dirRes=$res --angle2D=10 --contrast=1 --boxSize=$box
+$prog --nGPU=1 --nCPU=6 --mode=$m --thresh=0.3 --dirSch=$tpl --dirTgt=$orig --dirMskSch=$msk --dirRes=$res --angle2D=10 --contrast=1 --boxSize=$box
 done
 
 cd $res/pik_coord/
@@ -75,39 +75,78 @@ e2proc2d.py --outtype=imagic 00xx__mask__xx__yyy.map output.img
 
 
    --dirTgt=<string>
-     (required)  Directory of target micrographs (*.map)
+     (required)  Directory of target images (*.mrc)
 
    --dirSch=<string>
-     (required)  Directory of search template images (*.map)
+     (required)  Directory of search images (*.mrc)
 
-   --dirMsk=<string>
-     (required)  Directory of mask images (*.tif)
+   --dirMskRef=<string>
+     Directory of masks for target images (*.tif)
+
+   --dirMskSch=<string>
+     (required)  Directory of masks for search images (*.tif)
 
    --dirRes=<string>
      (required)  Directory for results
 
-   --mode=<bool>
+   --mode=<unsigned int>
      (required)  Running mode: 0-compute correlation, 1-perform picking
-
-   --thresh=<float>
-     (required)  Thresholding value for picking: [-1 1]
+     (box only), 2-perform picking
 
    --angle2D=<float>
      (required)  In-plane rotating angle in degree, (0 = no rotation)
 
    --contrast=<bool>
-     (required)  Micrograph contrast: 0-negative peaks (cryo), 1-positive peaks (neg. stain)
+     (required)  Micrograph contrast: 0-negative peaks (cryo), 1-positive peaks (neg.stain)
+
+   --thresh=<float>
+     (required)  Threshold value for picking: [0-1]
 
    --nPickMax=<unsigned int>
      Max number of particles picked from each micrograph (0 = no limit)
-     
+
    --boxSize=<unsigned int>
-     Size of picked regions (use search image size if not provided)     
+     Size of picked images (if not provided or = 0, use search image size)
+
+   --boxDist=<unsigned int>
+     Minimal distance between peaks (if not provided or = 0, use search
+     image half-size)
 
    --nCPU=<unsigned int>
-     Number of CPU cores
+     Number of CPU cores / process
 
    --nGPU=<unsigned int>
-     Number of GPUs
+     Number of GPUs / process
+
+   --mpiDistTgt=<bool>
+     Distribution of target images to processes: 0-no, 1-yes
+
+   --,  --ignore_rest
+     Ignores the rest of the labeled arguments following this flag.
+
+   --version
+     Displays version information and exits.
+
+   -h,  --help
+     Displays usage information and exits.
+
+
+   gEMpicker is a template-based, highly parallel GPU-accelerated particle
+   picking program developed at INRIA Nancy. It runs in multi-thread and
+   multi-process mode to use all avaliable CPU cores and GPUs in a single
+   workstation or a multi-node cluster for the correlation computation. 
+
+   Supported formats: MRC for target and search images, TIFF for masks 
+
+   Copyright: Thai V. Hoang, INRIA 
+
+   Email: vanthai.hoang@inria.fr 
+
+   Reference: 
+
+   T. V. Hoang, X. Cavin, P. Schultz, and D. W. Ritchie, "gEMpicker: A
+   highly parallel GPU-accelerated tool for electron micrograph particle
+   picking," BMC Structural Biology, 2013.
+
 
 comments
