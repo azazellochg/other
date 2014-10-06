@@ -5,12 +5,14 @@ export IMAGIC_BATCH=1
 ###This is free software, and you are welcome to redistribute it
 ###under GNU GENERAL PUBLIC LICENSE Version 3.
 
-echo -e "Batch to process SerialEM mrc stacks: create a stack of mrc raw data and a stack of power spectrums\n"
+echo -e "Batch to process SerialEM mrc stacks: create a mrc raw data folder and a stack of power spectrums\n------------------------------------"
 #source your EMAN2 bashrc file here!
 source ~/eman21.rc # EMAN2.1-beta
 ######################################
+#Adjust threshold parameters if you want
 UpperThres=7
 LowerThres=0
+######################################
 mkdir power 2>/dev/null
 mkdir raw 2>/dev/null
 docfile=`ls -l *.mdoc | head -1 | awk '{print $9}'`
@@ -44,60 +46,63 @@ read CO
 [ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
 : CO=${CO:=4}
 COPS=`echo "scale=3;$PS*$CO" | bc`
-echo -n "Mask power spectrums? [y] "
+echo -n "Mask power spectrums (this is useful for IMAGIC display)? [n] "
 read ans
-: ans=${ans:="y"}
-ans2=0
+: ans=${ans:="n"}
 case $ans in
 Y|y)
-	echo -n "Put a mask on power spectrum up to first zero (A): [20] "
-	read RES
-	: RES=${RES:=20}
-	rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
-	;;
+        ans="y"
+        echo -n "Put a mask on power spectrum up to first zero (A): [20] "
+        read RES
+        : RES=${RES:=20}
+        rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
+        ;;
 N|n)
-	ans2=1
-	;;
+        ans="n"
+        ;;
 *)
-	echo "Wrong answer!" && exit 1
-	;;
+        echo "Wrong answer!" && exit 1
+        ;;
 esac
 else
 echo "It is not a SerialEM mdoc file!" && exit 1
 fi
-echo "`date`
+[ -f output.log ] && rm -f output.log
+echo -e "`date`
 Pixel size (uncoarsened) was: $PS
 Coarsening factor was: $CO
-Micrographs converted:" > output.log
+Micrographs converted:
+####################################\n" > output.log
 ### Converting mrc SerialEM stacks to mrc files ###
 tot=`ls *.mrc | wc -l | awk '{print $1}'`
 number=1
 for i in `ls *.mrc | sed -e "s/.mrc//g"`
 do
-	if [ ! -e "${i}.mrc.mdoc" ]
-		then
-		echo -e "WARNING: No corresponding mdoc file found for ${i}.mrc!\n"
-	fi
-	echo -en "Writing mrc images...($number out of $tot)\r"
-	e2proc2d.py ${i}.mrc raw/${i}.mrc --unstacking --threed2twod &> /dev/null
-	((number++))
+        if [ ! -e "${i}.mrc.mdoc" ]
+                then
+                echo -e "WARNING: No corresponding mdoc file found for ${i}.mrc!\n" | tee -a output.log
+        fi
+        echo -en "Writing mrc images...($number out of $tot)\r"
+        echo "Unstacking ${i}.mrc ..." >> output.log
+        e2proc2d.py ${i}.mrc raw/${i}.mrc --unstacking --threed2twod >> output.log 2>&1
+        ((number++))
 done
-echo -e "\nWriting mrc images..DONE!"
+echo -e "####################################\nWriting mrc images..DONE!" | tee -a output.log
 ### Renaming files ###
 count=1
 for i in `ls raw/*.mrc`
 do
-	mv ${i} raw/img${count}.mrc
-	((count++))
-	echo -en "Renaming mrc images...\r"
+        mv ${i} raw/img${count}.mrc
+        ((count++))
+        echo -en "Renaming mrc images...\r"
 done
-echo -e "Renaming mrc images..DONE!"
+echo -e "Renaming mrc images..DONE!\n####################################" | tee -a output.log
 ### Start processing of mrc files in raw directory ###
 num=`ls raw/img*.mrc | wc -l | awk '{print $1}'`
 count2=1
 for a in `ls raw/img*.mrc | sed -e 's/raw\///g;s/.mrc//g'`
 do
-echo ${a}.mrc >> output.log
+echo "Normalizing, coarsing and calculating power spectrum for raw/${a}.mrc" >> output.log
 if [ "$CO" != "1" ]
 then
 echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
@@ -109,12 +114,45 @@ e2proc2d.py raw/${a}.mrc power/pow-stack.img --process=normalize.edgemean --proc
 ((count2++))
 fi
 done
-if [ ${ans2} -eq 1 ];then
-echo -en "\nMasking power spectrums..." | tee -a output.log
-e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log
+if [ -n "${IMAGIC_ROOT}" ];then
+ls raw/img*.mrc | sed -e 's/raw\/img//g;s/.mrc//g' > mics.plt
+export IMAGIC_BATCH=1
+echo ""
+echo -e "####################################\nIMAGIC found! Setting micrograph number in header files..." | tee -a output.log
+${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
+WRITE
+MICROGRAPH_ID
+PLT_FILE
+mics.plt
+power/pow-stack
+EOF
+fi 
+
+if [ ${ans} == "y" ];then
+echo -e "####################################\nMasking power spectrums..." | tee -a output.log
+e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log 2>&1
 size=`e2iminfo.py power/pow-stack.img | grep "in IMAGIC format" | awk '{print $7}'`
 rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
-e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log
+e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log 2>&1
+
+if [ -n "${IMAGIC_ROOT}" ];then
+ls raw/img*.mrc | sed -e 's/raw\/img//g;s/.mrc//g' > mics.plt
+export IMAGIC_BATCH=1
+echo -e "####################################\nIMAGIC found! Setting micrograph number in header files..." | tee -a output.log
+${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
+WRITE
+MICROGRAPH_ID
+PLT_FILE
+mics.plt
+power/pow-stack-t
+EOF
+fi 
+
 fi
-echo -e "\nDONE!"
-echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)"
+
+echo -e "DONE!"
+if [ ${ans} == "y" ];then
+echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)" | tee -a output.log
+else
+echo "There are two stacks of power spectrums (pixel size is ${COPS}): pow-stack and pow-stack-t (thresholded)" | tee -a output.log
+fi
