@@ -8,9 +8,9 @@
 ### One can adjust -fod and/or -kit parameter in case motioncorr fails to align the frames
 
 ### input parameters ###
-prog="/usr/local/bin/motioncorr_v2.1"   #Path to the motioncorr executable
-fod="2"                                 #Number of frame offset for frame comparison
-logs="logs"                             #Folder for per-stack log files
+prog="/usr/local/bin/motioncorr_v2.1"	#Path to the motioncorr executable
+fod="2" 				#Number of frame offset for frame comparison
+logs="logs"				#Folder for per-stack log files
 
 ### create log files temp directory: 1 log per input file
 [ -f ${PWD}/*.log ] && rm -f ${PWD}/*.log
@@ -61,13 +61,14 @@ mv ${output_folder}/${name}_stackunali.mrcs ${output_folder}/${name}_stackunali.
 
 ### run motion correction for mrc stack, output corrected stack and sum
 ### "-atm" parameter will align all frames to the last one - total exposure
-timeout -s 9 1m ${prog} ${output_folder}/${name}_stackunali.mrc -fod ${fod} -ssc 1 -fct ${output_folder}/${name}_movie.mrc -fcs ${output_folder}/${name}_sumcorr.mrc -flg ${logs}/${name}_frames.log -dsp 0 -atm -${num_frames}
+${prog} ${output_folder}/${name}_stackunali.mrc -fod ${fod} -ssc 1 -fct ${output_folder}/${name}_movie.mrc -fcs ${output_folder}/${name}_sumcorr.mrc -flg ${logs}/${name}_frames.log -dsp 0 -atm -${num_frames}
 
-### check for errors
+### rerun motioncorr with 2.0px error if previous failed
 if [ "$?" -ne 0 ]
 then
-timeout -s 9 1m ${prog} ${output_folder}/${name}_stackunali.mrc -fod ${fod} -ssc 1 -fct ${output_folder}/${name}_movie.mrc -fcs ${output_folder}/${name}_sumcorr.mrc -flg ${logs}/${name}_frames.log -dsp 0 -kit 2.0 -atm -${num_frames}
-echo "${name}_frames.mrc" >> ${PWD}/movies_higherror.log
+${prog} ${output_folder}/${name}_stackunali.mrc -fod ${fod} -ssc 1 -fct ${output_folder}/${name}_movie.mrc -fcs ${output_folder}/${name}_sumcorr.mrc -flg ${logs}/${name}_frames.log -dsp 0 -kit 2.0 -atm -${num_frames}
+av_shift=`grep "Final shift (Average" ${logs}/${name}_frames.log | sed 's/[^0-9.]*//g'`
+echo "${name}_frames.mrc avg_shift: $av_shift pixels/frame" >> ${PWD}/movies_higherror.log
 fi
 [ $? -ne 0 ] && echo "${name}_frames.mrc" >> ${PWD}/movies_unaligned.log
 
@@ -75,7 +76,8 @@ fi
 [ -f ${output_folder}/${name}_movie.mrc ] && mv ${output_folder}/${name}_movie.mrc ${output_folder}/${name}_movie.mrcs
 
 #add successfully aligned stack to log file
-echo "${name}_frames.mrc" >> ${PWD}/movies_aligned.log
+av_shift=`grep "Final shift (Average" ${logs}/${name}_frames.log | sed 's/[^0-9.]*//g'`
+echo "${name}_frames.mrc avg_shift: $av_shift pixels/frame" >> ${PWD}/movies_aligned.log
 done
 
 ### the end
@@ -85,4 +87,4 @@ echo "Finished: your aligned stacks are in: ${output_folder}/*_movie.mrcs
           Aligned images are in -> movies_aligned.log
           Aligned images with 2.0 pixel error are in -> movies_higherror.log
           UNaligned images are in -> movies_unaligned.log
-          Log files for each image are in -> ${logs}/ folder"
+	  Log files for each image are in -> ${logs}/ folder"
