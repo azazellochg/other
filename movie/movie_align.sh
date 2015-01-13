@@ -15,22 +15,28 @@ normal=`tput sgr0`
 testname=`ls raw_stacks/* | head -1`
 FrameNum=`e2iminfo.py ${testname} | head -1 | awk '{print $2}'`
 [ ! -s logs/frame.list ] && echo "No frame list found. Exiting.." && exit 1
+total=`wc -l < logs/frame.list`
+key=1
 for stack in `cat logs/frame.list | grep frames | sed 's/_frames.mrc//g'`
 do
 if [ -f raw_stacks/${stack}_stack.mrcs ] && [ ! -f aligned_sums/${stack}.mrc ]
 then
-timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc 1 -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm -${FrameNum} -flg logs/alignment/${stack}_align.log
+echo -ne "Aligning frames $key/$total: ...\r"
+timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc 1 -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm -${FrameNum} -flg logs/alignment/${stack}_align.log &>/dev/null
 if [ ! -f aligned_sums/${stack}.mrc ]
 then
 echo "raw_stacks/${stack}_stack.mrcs" >> logs/not_aligned.plt
-echo -e "||||||||||\n\n${bold}raw_stacks/${stack}_stack.mrcs was NOT aligned${normal}\n\n||||||||||"
+echo -ne "Aligning frames $key/$total: ... FAIL!\n"
 else
-echo -e "||||||||||\n\n${bold}raw_stacks/${stack}_stack.mrcs was aligned${normal}\n\n||||||||||"
+shift=`grep "Final shift (Average" logs/alignment/${stack}_align.log | sed -e 's/Final\ shift\ (Average//g;s/)\://g'`
+echo -ne "Aligning frames $key/$total: ... average shift ${shift}\n"
 fi
 fi
+((key++))
 done
 grep "Final shift (Average" logs/alignment/* | sed -e 's/Final\ shift\ (Average//g;s/)\://g' | sort -n -k2 > logs/average_shift.log
-echo -e "\nFinished: log in -> logs/average_shift.log
-          not aligned images in -> logs/not_aligned.plt
-	  aligned movies for Relion: aligned_movies/*_movie.mrcs
-	  aligned sums for Relion: aligned_sums/*.mrc"
+echo -e "\nResults: shifts in -> logs/average_shift.log
+          detailed logs in -> logs/alignment/*.log
+          NOT aligned images in -> logs/not_aligned.plt
+	  aligned movies for Relion -> aligned_movies/*_movie.mrcs
+	  aligned sums for Relion -> aligned_sums/*.mrc"
