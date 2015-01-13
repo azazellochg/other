@@ -15,6 +15,13 @@ normal=`tput sgr0`
 testname=`ls raw_stacks/* | head -1`
 FrameNum=`e2iminfo.py ${testname} | head -1 | awk '{print $2}'`
 [ ! -s logs/frame.list ] && echo "No frame list found. Exiting.." && exit 1
+echo -n "Do you want to save aligned movie stacks? (0 - no, 1 - yes, default: 1): "
+read ssc
+ssc=${ssc:-1}
+re='^[0-1]+$'
+if ! [[ $ssc =~ $re ]]; then
+echo "error: Wrong answer!" >&2; exit 1
+fi
 total=`wc -l < logs/frame.list`
 key=1
 for stack in `cat logs/frame.list | grep frames | sed 's/_frames.mrc//g'`
@@ -22,7 +29,7 @@ do
 if [ -f raw_stacks/${stack}_stack.mrcs ] && [ ! -f aligned_sums/${stack}.mrc ]
 then
 echo -ne "Aligning frames $key/$total: ...\r"
-timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc 1 -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm -${FrameNum} -flg logs/alignment/${stack}_align.log &>/dev/null
+timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc $ssc -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm -${FrameNum} -flg logs/alignment/${stack}_align.log &>/dev/null
 if [ ! -f aligned_sums/${stack}.mrc ]
 then
 echo "raw_stacks/${stack}_stack.mrcs" >> logs/not_aligned.plt
