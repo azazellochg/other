@@ -1,9 +1,7 @@
 #!/bin/bash
 
-#Strong lowpass filter on micrographs before picking
-#for i in `seq 1 3600`;do
-#e2proc2d.py img/img${i}.tif img/img${i}.tif --inplace --process=filter.lowpass.gauss:apix=6.84:cutoff_abs=0.17 --process=normalize.edgemean
-#done
+#coarse and filter mics for gempicker to 30A, do the same with references
+#for i in `ls aligned_sums/*.mrc | sed 's/aligned_sums//g'`;do e2proc2d.py aligned_sums${i} aligned_sums_c4_f30${i} --meanshrink 4 --process=filter.lowpass.gauss:apix=5.64:cutoff_abs=0.376 --process=normalize.edgemean ;done
 
 #------------------------INPUT PARAMETERS---------------------------
 prog="/usr/local/gempicker/bin/gEMpicker"
@@ -11,45 +9,24 @@ orig="$PWD/img"
 tpl="$PWD/tpl"
 msk="$PWD/msk"
 res="$PWD/output"
-box="64"     #desired box size
-photo="512" #size of micrograph (should be square!)
+box="80"     #desired box size
+photo="1024" # size of micrograph (should be square!)
+angle="10" # angular step of template search
+contrast="1" # 1-protein is white, 0-protein is black
+maxpeaks="50" # max number of particles per micrograph
+dist="60" # minimal distance between picked particles
+
 #-------------------------------------------------------------------
 [ ! -d $res ] && mkdir $res
 ( [ ! -d $orig ] || [ ! -d $tpl ] || [ ! -d $msk ] ) && ( echo "Some directories was not found!" && exit 1 )
 
-for m in 0 1
+D1=`date +%s`
+echo -e "Started on `date`"
+for m in `seq 0 1`
 do
-$prog --nGPU=1 --nCPU=6 --mode=$m --thresh=0.3 --dirSch=$tpl --dirTgt=$orig --dirMskSch=$msk --dirRes=$res --angle2D=10 --contrast=1 --boxSize=$box
+${prog} --nGPU=1 --nCPU=12 --mode=$m --thresh=0.1 --dirSch=${tpl} --dirTgt=${orig} --dirMskSch=${msk} --dirRes=${res} --angle2D=${angle} --contrast=${contrast} --boxSize=${box} --nPickMax=${maxpeaks} --boxDist=${dist}
 done
-
-cd $res/pik_coord/
-if ls *.box;
-then rm -f *.box;
-else :
-fi
-
-echo -e "Enter downsampling factor: (1 - no downsampling): "
-read down
-
-for k in `ls *__piks.txt | sed -e 's/__piks.txt//g'`
-do
-  input="./${k}__piks.txt"
-  output_down="./${k}_downsampled.box"
-  output="./${k}.box"
-
-  for i in `awk '{if (NR!=1) {print $3","$4}}' $input`
-  do
-    X_down="$((($photo-`echo $i | cut -d "," -f2`)-$box/2))"
-    X="$(($X_down*$down))"
-    Y_down="$((`echo $i | cut -d "," -f1`-$box/2))"
-    Y="$(($Y_down*$down))"
-    box_orig="$(($box*$down))"
-   echo "$X $Y $box_orig $box_orig" >> $output
-   echo "$X_down $Y_down $box $box" >> $output_down
-  done
-
-done
-echo -e "\nCoordinates for EMAN1 batchboxer are in folder $res/pik_coord/*.box\n"
+D2=`date +%s` ; D=$((D2-D1)) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D/3600)) $(($D/60%60)) $(($D%60))
 
 #----------------COMMENTS-------------------------------------------
 <<comments
