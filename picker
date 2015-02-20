@@ -5,12 +5,13 @@
 
 #------------------------INPUT PARAMETERS---------------------------
 prog="/usr/local/gempicker/bin/gEMpicker"
-orig="$PWD/img"
-tpl="$PWD/tpl"
+micrographs="$PWD/img"
+refs="$PWD/tpl"
 msk="$PWD/msk"
-res="$PWD/output"
+output="$PWD/output"
+threshold_low="0.1"
+threshold_high="0.3"
 box="80"     #desired box size
-photo="1024" # size of micrograph (should be square!)
 angle="10" # angular step of template search
 contrast="1" # 1-protein is white, 0-protein is black
 maxpeaks="50" # max number of particles per micrograph
@@ -24,7 +25,7 @@ D1=`date +%s`
 echo -e "Started on `date`"
 for m in `seq 0 1`
 do
-${prog} --nGPU=1 --nCPU=12 --mode=$m --thresh=0.1 --dirSch=${tpl} --dirTgt=${orig} --dirMskSch=${msk} --dirRes=${res} --angle2D=${angle} --contrast=${contrast} --boxSize=${box} --nPickMax=${maxpeaks} --boxDist=${dist}
+${prog} --nGPU=1 --nCPU=12 --mode=$m --thresh=${threshold_low} --threshHigh=${threshold_high} --dirSch=${refs} --dirTgt=${micrographs} --dirMskSch=${msk} --dirRes=${output} --angle2D=${angle} --contrast=${contrast} --boxSize=${box} --nPickMax=${maxpeaks} --boxDist=${dist}
 done
 D2=`date +%s` ; D=$((D2-D1)) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D/3600)) $(($D/60%60)) $(($D%60))
 
@@ -51,33 +52,56 @@ To convert gEMpicker picked particles use the same program:
 e2proc2d.py --outtype=imagic 00xx__mask__xx__yyy.map output.img
 
 
-   --dirTgt=<string>
-     (required)  Directory of target images (*.mrc)
+ USAGE: 
 
-   --dirSch=<string>
-     (required)  Directory of search images (*.mrc)
-
-   --dirMskRef=<string>
-     Directory of masks for target images (*.tif)
-
-   --dirMskSch=<string>
-     (required)  Directory of masks for search images (*.tif)
-
-   --dirRes=<string>
-     (required)  Directory for results
-
-   --mode=<unsigned int>
-     (required)  Running mode: 0-compute correlation, 1-perform picking
+   /usr/local/gempicker/bin/gEMpicker  --dirTgt=<string> --dirSch=<string>
+                                       [--dirMskRef=<string>]
+                                       --dirMskSch=<string>
+                                       --dirRes=<string> --mode=<unsigned
+                                       int> --angle2D=<float>
+                                       --contrast=<bool> --thresh=<float>
+                                       [--threshHigh=<float>]
+                                       [--nPickMax=<unsigned int>]
+                                       [--boxSize=<unsigned int>]
+                                       [--boxDist=<unsigned int>]
+                                       [--nCPU=<unsigned int>]                                                                                                                                                                               
+                                       [--nGPU=<unsigned int>]                                                                                                                                                                               
+                                       [--mpiDistTgt=<bool>] [--]                                                                                                                                                                            
+                                       [--version] [-h]                                                                                                                                                                                      
+                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                             
+Where:                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                             
+   --dirTgt=<string>                                                                                                                                                                                                                         
+     (required)  Directory of target micrograph images (*.mrc)                                                                                                                                                                               
+                                                                                                                                                                                                                                             
+   --dirSch=<string>                                                                                                                                                                                                                         
+     (required)  Directory of search reference images (*.mrc)                                                                                                                                                                                
+                                                                                                                                                                                                                                             
+   --dirMskRef=<string>                                                                                                                                                                                                                      
+     Directory of masks for target images (*.tif)                                                                                                                                                                                            
+                                                                                                                                                                                                                                             
+   --dirMskSch=<string>                                                                                                                                                                                                                      
+     (required)  Directory of masks for search images (*.tif)                                                                                                                                                                                
+                                                                                                                                                                                                                                             
+   --dirRes=<string>                                                                                                                                                                                                                         
+     (required)  Directory for results                                                                                                                                                                                                       
+                                                                                                                                                                                                                                             
+   --mode=<unsigned int>                                                                                                                                                                                                                     
+     (required)  Running mode: 0-compute correlation, 1-perform picking                                                                                                                                                                      
      (box only), 2-perform picking
 
    --angle2D=<float>
      (required)  In-plane rotating angle in degree, (0 = no rotation)
 
    --contrast=<bool>
-     (required)  Micrograph contrast: 0-negative peaks (cryo), 1-positive peaks (neg.stain)
+     (required)  Micrograph contrast: 0-negative peaks, 1-positive peaks
 
    --thresh=<float>
-     (required)  Threshold value for picking: [0-1]
+     (required)  Threshold value for picking - low limit: (0,1]
+
+   --threshHigh=<float>
+     Threshold value for picking - high limit: (0,1]
 
    --nPickMax=<unsigned int>
      Max number of particles picked from each micrograph (0 = no limit)
@@ -124,6 +148,4 @@ e2proc2d.py --outtype=imagic 00xx__mask__xx__yyy.map output.img
    T. V. Hoang, X. Cavin, P. Schultz, and D. W. Ritchie, "gEMpicker: A
    highly parallel GPU-accelerated tool for electron micrograph particle
    picking," BMC Structural Biology, 2013.
-
-
 comments
