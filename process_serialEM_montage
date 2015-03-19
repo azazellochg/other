@@ -15,7 +15,7 @@ LowerThres=0
 ######################################
 mkdir power 2>/dev/null
 mkdir raw 2>/dev/null
-docfile=`ls -l *.mdoc | head -1 | awk '{print $9}'`
+docfile=`ls -l *.mdoc | head -1 | awk '{print $NF}'`
 if cat $docfile | grep "SerialEM: Digitized by Gatan Camera on TF20" &> /dev/null
 then
 mag=`cat $docfile  | grep "Magnification" | uniq | sed -e 's/[^0-9]*//g'`
