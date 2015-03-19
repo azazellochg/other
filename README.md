@@ -3,9 +3,9 @@ other
 
 ###Other bash scripts
 
-#####align_frames.sh
+#####movie/movie_prep_parallel.sh and movie/movie_align.sh
 
-Script reads FEI mrc stack files (*_frames.mrc, 7 frames) from latest EPU version, adds total exposure to the stack and runs motioncorr.
+The two scripts read FEI mrc stack files (*_frames.mrc, 7 frames) from latest EPU version, add total exposure to the stack and run motioncorr.
 
 ---
 #####picker
@@ -15,12 +15,7 @@ The simple script to run gEMpicker software will produce EMAN1 .box files with p
 ---
 #####prep_montage
 
-This script produces mount (both img and mrc) images from spotscan images (acquired on CM120) and also perform block convolution with low-pass filtering
-
----
-#####prep_movie - DISCONTINUED script :( DO NOT USE!
-
-The script looks for raw and tif files in current directory (including subdirectories) and produces a list.txt: frames/average tif
+This script produces mount (both img and mrc) images from spotscan images (acquired on CM120) and also performs block convolution with low-pass filtering
 
 ---
 #####process_serialEM_montage
