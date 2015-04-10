@@ -41,6 +41,9 @@ HourMin=`echo $name | awk -F "_" '{print $(NF)}'`
 if [[ "$HourMin" == 0000 ]]
 then
 RealNum=2359
+date_old=`echo "${base:(-8)}"`
+date_new=`date "--date=${date_old} -1 day" +%Y%m%d`
+base=`echo ${base} | sed -r 's/.{8}$/'$date_new'/'`
 else
 Min=${HourMin:2:2}
 Hours=${HourMin:0:2}
