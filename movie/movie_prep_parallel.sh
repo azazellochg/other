@@ -8,7 +8,7 @@ if [ "$#" -ne 1 ] || [ "$1" != "mrc" ]; then
 echo "usage: `basename $0` mrc" # Right now it is not working with tifs
 exit 1
 fi
-echo "Specify number of frames in *_frames.mrc files: [7]  "
+echo -n "Specify number of frames in *_frames.mrc files: [7]  "
 read num
 num=${num:-7}
 re='^[0-9]+$'
@@ -27,10 +27,9 @@ frames=`cat logs/frame.list | grep frames | wc -l`
 [ $frames -lt 8 ] && echo "Need more than 7 different images to process in parallel correctly" && exit 1
 AllIma=`wc -l < logs/del.list`
 RawNumF=`echo "scale=2;$AllIma/$frames" | bc`
-RawNum=`echo $RawNumF | sed "s/.00//"`
-if [ "$RawNum" -ne 2 ]
+if [ "$RawNumF" != "2.00" ]
 then
-echo "number of frames stacks and ${1} files don't match! please check files"
+echo "ERROR: number of frames stacks and ${1} files don't match! please check files"
 exit 1
 fi
 stackcreate () {
