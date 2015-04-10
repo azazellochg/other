@@ -1,6 +1,6 @@
 #!/bin/bash
 ###
-###Script works only with mrc files/stacks of frames (16-bit int) coming from EPU version 
+###Script works only with mrc files/stacks of frames (16-bit int) coming from EPU version 1.4.3.1159REL
 ###It will create stacks of (frames + total exposure) for further processing by motioncorr
 ###
 #source /home/sharov/soft/EMAN2.1/eman2.bashrc
