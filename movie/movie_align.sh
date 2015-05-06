@@ -25,7 +25,7 @@ fi
 total=`wc -l < logs/frame.list`
 key=1
 echo ""
-for stack in `cat logs/frame.list | grep frames | sed 's/_frames.mrc//g'`
+for stack in `cat logs/frame.list | sed 's/.*FoilHole/FoilHole/g;s/_frames.mrc//g'`
 do
 if [ -f raw_stacks/${stack}_stack.mrcs ] && [ ! -f aligned_sums/${stack}.mrc ]
 then
