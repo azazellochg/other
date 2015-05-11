@@ -42,7 +42,9 @@ fi
 fi
 ((key++))
 done
-grep "Final shift (Average" logs/alignment/* | sed -e 's/Final\ shift\ (Average//g;s/)\://g' | sort -n -k2 > logs/average_shift.log
+grep "Final shift (Average" logs/alignment/* | sed -e 's/Final\ shift\ (Average//g;s/)\://g' > logs/average_shift1.log
+cat logs/average_shift1.log | sort -n -k2 > logs/average_shift.log
+rm -f logs/average_shift1.log
 echo -e "\nResults: shifts in -> logs/average_shift.log
           detailed logs in -> logs/alignment/*.log
           NOT aligned images in -> logs/not_aligned.plt
