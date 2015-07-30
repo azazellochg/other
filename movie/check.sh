@@ -32,7 +32,7 @@ for img in `grep frames logs/del.list | sed 's/_frames.mrc//g'` #grep frames onl
 				echo -e "corresponding frame stack = ${img}_frames.mrc\n"
 				[ $rep -eq 1 ] && mv ${HiDo}.mrc ${img}.mrc && ((count++))
 			else							# otherwise the corresponding total exposure was not found
-				echo $ima >> logs/suspicious_frames.txt
+				echo $img >> logs/suspicious_frames.txt
 				continue
 			fi
 		fi
