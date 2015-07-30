@@ -22,7 +22,7 @@ fi
 mkdir raw_stacks
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
 #find . -name "FoilHole*.${1}" > logs/del.list
-#grep "frames" logs/del.list > logs/frame.list
+grep "frames" logs/del.list > logs/frame.list
 frames=`grep -c frames logs/frame.list`
 [ $frames -lt 8 ] && echo "Need more than 7 images to process in parallel correctly" && exit 1
 AllIma=`wc -l < logs/del.list`
