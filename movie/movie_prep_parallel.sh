@@ -46,9 +46,9 @@ do
 			echo ${name}_frames.mrc >> logs/incomplete_stacks.list
 		else
 			#Normalize the frames
-			e2proc2d.py ${name}_frames.mrc raw_stacks/${names}_stack.mrcs --process=threshold.clampminmax.nsigma:nsigma=4 --process=normalize.edgemean --mult=-1 > /dev/null 2>&1
+			e2proc2d.py ${name}_frames.mrc raw_stacks/${names}_stack.mrcs --process=threshold.clampminmax.nsigma:nsigma=4 --process=normalize.edgemean --mult=-1 --outmode=int16 > /dev/null 2>&1
 			#add high-dose image (rotated 90 degrees)
-			e2proc2d.py ${name}.mrc raw_stacks/${names}_stack.mrcs --rotate=90 --process=threshold.clampminmax.nsigma:nsigma=4 --process=normalize.edgemean --mult=-1 > /dev/null 2>&1
+			e2proc2d.py ${name}.mrc raw_stacks/${names}_stack.mrcs --rotate=90 --process=threshold.clampminmax.nsigma:nsigma=4 --process=normalize.edgemean --mult=-1 --outmode=int16 > /dev/null 2>&1
 			[ $? -ne 0 ] && echo "raw_stacks/${names}_stack.mrcs" >> logs/eman_problems.list
 			echo "${names}" >> logs/percent.list
 		fi
