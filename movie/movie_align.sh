@@ -10,10 +10,6 @@ mkdir aligned_sums
 [ -d logs/alignment ] && rm -rf logs/alignment
 mkdir -p logs/alignment
 [ ! -d raw_stacks ] && echo "No stacks found. Exiting.." && exit 1
-bold=`tput bold`
-normal=`tput sgr0`
-testname=`ls raw_stacks/* | head -1`
-FrameNum=`e2iminfo.py ${testname} | head -1 | awk '{print $2}'`
 [ ! -s logs/frame.list ] && echo "No frame list found. Exiting.." && exit 1
 echo -n "Do you want to save aligned movie stacks? (0 - no, 1 - yes, default: 1): "
 read ssc
@@ -30,7 +26,7 @@ do
 if [ -f raw_stacks/${stack}_stack.mrcs ] && [ ! -f aligned_sums/${stack}.mrc ]
 then
 echo -ne "Aligning frames $key/$total: ...\r"
-timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc $ssc -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm -${FrameNum} -flg logs/alignment/${stack}_align.log &>/dev/null
+timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc $ssc -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm 1 -flg logs/alignment/${stack}_align.log &>/dev/null
 if [ ! -f aligned_sums/${stack}.mrc ]
 then
 echo "raw_stacks/${stack}_stack.mrcs" >> logs/not_aligned.plt
