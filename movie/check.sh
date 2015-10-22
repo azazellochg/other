@@ -17,7 +17,7 @@ fi
 
 [ ! -d logs ] && mkdir logs
 [ -f logs/suspicious_frames.txt ] && rm -f logs/suspicious_frames.txt
-find . -name "FoilHole*.${1}" > logs/del.list
+find . -name "FoilHole_*_Data_*.${1}" > logs/del.list
 count=0
 for img in `grep frames logs/del.list | sed 's/_frames.mrc//g'` #grep frames only
 	do
