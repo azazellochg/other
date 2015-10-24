@@ -30,12 +30,12 @@ rm -rf tmp logs/percent.list logs/proc* logs/pid.list >> /dev/null 2>&1
 [ -d tmp ] || mkdir tmp
 mkdir Micrographs
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
-ls raw_stacks/*.mrc > logs/raw_stacks.list
+ls raw_stacks/*.mrcs > logs/raw_stacks.list
 MicNum=`wc -l < logs/raw_stacks.list`
 ctfestimate () {
 for ima in `cat $1`
         do
-                name=`echo $ima | sed -e 's/_stack.mrcs//'`
+                name=`basename $ima | sed -e 's/_stack.mrcs//'`
                 ln -s "${PWD}/raw_stacks/${name}"_stack.mrcs ${PWD}/tmp/"${name}".mrc
                 ${ctffind_bin} > Micrographs/${name}_sum_corr_ctffind3.log << EOF
 ${PWD}/tmp/${name}.mrc
@@ -62,9 +62,9 @@ EOF
                 echo "${name}" >> logs/percent.list
         done
 }
-split -n l/${ProcNum} -a 1 -de logs/raw_stacks.list logs/proc
+split -n l/${ProcNum} -a 2 -de logs/raw_stacks.list logs/proc
 ProcNum2=$((ProcNum-1))
-for nu in `seq 0 ${ProcNum2}`
+for nu in `seq -f "%02.0f" 0 ${ProcNum2}`
         do
                 ctfestimate logs/proc${nu} &
                 echo $! >> logs/pid.list
