@@ -77,3 +77,4 @@ do
 done
 echo -e "\n"
 setterm -cursor on
+rm -f logs/pid.list logs/proc* logs/percent.list
