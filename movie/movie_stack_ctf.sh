@@ -84,4 +84,6 @@ while [ "$ProI" -eq 0 ]
         done
 setterm -cursor on
 rm -rf tmp logs/percent.list logs/proc* logs/pid.list
-echo -e "Done! Output files for each stack are in Micrographs/ folder\n"
+echo "Done! Output files for each stack are in Micrographs/ folder. Max resolution is in ctfrings.txt file\n"
+for i in `ls Micrographs/*.txt | grep -v '_avrot'`;do awk 'END{print FILENAME,$7}' ${i};done | sort -n -k2 > ctfrings.txt
+
