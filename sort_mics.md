@@ -1,4 +1,5 @@
 To sort micrographs by max resolution detected by CTFFIND4:
+  * max res is column #6 (CTFFIND version <= 4.0.15) or #7 in txt file!
 
 ```
 for i in `ls aligned_sums/*.txt | grep -v '_avrot'`;do awk 'END{print FILENAME,$6}' ${i};done | sort -n -k2 > ctfrings.txt
