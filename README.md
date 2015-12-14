@@ -3,6 +3,11 @@ other
 
 ###Other bash scripts
 
+#####gnuplot
+
+The script will plot a distribution of a single parameter using *gnuplot*.
+
+---
 #####movie/movie_prep_parallel.sh and movie/movie_align.sh
 
 The two scripts read FEI mrc stack files (*_frames.mrc, 7 frames) from EPU version 1.4.3.1159REL, add total exposure to the stack (in parallel) and run motioncorr (non-parallel).
@@ -21,6 +26,11 @@ This script produces mount (both *.img and *.mrc) images from spotscan images (a
 #####process_serialEM_montage
 
 The script will split SerialEM mrc stacks (acquired on Tecnai F20) into separate mrc files and produce a stack of power spectrums, thresholded and masked (if required).
+
+---
+#####sort_mics
+
+Few commands to sort micrographs by max resolution (estimated by CTFFIND4) / defocus values.
 
 ---
 #####spotscan_clean_boxes
