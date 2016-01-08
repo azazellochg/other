@@ -4,7 +4,9 @@
 ###It will create stacks of (frames + total exposure) for further processing by motioncorr
 ###
 #source /home/sharov/soft/EMAN2.1/eman2.bashrc
-[ if `echo $EMAN2DIR` == "" ] || echo "EMAN2 NOT found!" && exit 1
+if [ -z $EMAN2DIR ]; then
+        echo "EMAN2 NOT found!" && exit 1
+fi
 if [ "$#" -ne 1 ] || [ "$1" != "mrc" ]; then
 	echo "usage: `basename $0` mrc" # Right now it is not working with tifs
 	exit 1
