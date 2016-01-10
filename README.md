@@ -8,9 +8,9 @@ other
 The script will plot a distribution of a single parameter using *gnuplot*.
 
 ---
-#####movie/movie_prep_parallel.sh and movie/movie_align.sh
+#####movie/*.sh
 
-The two scripts read FEI mrc stack files (*_frames.mrc, 7 frames) from EPU version 1.4.3.1159REL, add total exposure to the stack (in parallel) and run motioncorr (non-parallel).
+These scripts read FEI mrc stack files (*_frames.mrc, 7 frames) from EPU version 1.4.3.1159REL, add total exposure to the stack (in parallel), run CTFFIND4 on these unaligned stacks and then run motioncorr to produce aligned sums/movies (on GPU).
 
 ---
 #####picker
