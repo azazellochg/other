@@ -24,11 +24,12 @@ fi
 [ -d raw_stacks ] && rm -rf raw_stacks
 mkdir raw_stacks
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
-find . -name "FoilHole_*_Data_*.${1}" > logs/del.list
-grep "frames" logs/del.list > logs/frame.list
+#re-run find command since after check.sh script we might have renamed files
+find . -name "FoilHole_*_Data_*.${1}" > logs/files.list
+grep "frames" logs/files.list > logs/frame.list
 frames=`grep -c frames logs/frame.list`
 [ $frames -lt 8 ] && echo "Need more than 7 images to process in parallel correctly" && exit 1
-AllIma=`wc -l < logs/del.list`
+AllIma=`wc -l < logs/files.list`
 RawNumF=`echo "scale=2;$AllIma/$frames" | bc`
 if [ "$RawNumF" != "2.00" ]
 	then
