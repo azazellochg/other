@@ -17,9 +17,9 @@ fi
 
 [ ! -d logs ] && mkdir logs
 [ -f logs/suspicious_frames.txt ] && rm -f logs/suspicious_frames.txt
-find . -name "FoilHole_*_Data_*.${1}" > logs/del.list
+find . -name "FoilHole_*_Data_*.${1}" > logs/files.list
 count=0
-for img in `grep frames logs/del.list | sed 's/_frames.mrc//g'` #grep frames only
+for img in `grep frames logs/files.list | sed 's/_frames.mrc//g'` #grep frames only
 	do
 	timestamp=`echo "${img}"| awk -F "_" '{print $(NF-1),$NF}'`
 	timestamp_prev=`date "--date=${timestamp} 1 minutes ago" +%Y%m%d_%H%M`
@@ -38,3 +38,4 @@ for img in `grep frames logs/del.list | sed 's/_frames.mrc//g'` #grep frames onl
 		fi
 	done
 echo "$count stacks renamed!"
+[ -f logs/suspicious_frames.txt ] && echo "Total exposure was not found for certain frame stacks. Check logs/suspicious_frames.txt file!"
