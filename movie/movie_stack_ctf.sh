@@ -1,7 +1,7 @@
 #!/bin/bash
-#This script runs ctffind4 in parallel on unaligned movie stacks (frames + total exp)
+#This script runs ctffind4 in parallel on unaligned movie stacks (frames + total exp) located in raw_stacks folder
 ########### user input #################
-ctffind_bin="/home/sharov/soft/ctffind-4.0.16/ctffind"
+ctffind_bin="/home/sharov/soft/ctffind-4.0.17/ctffind"
 frames_avg="1"          # Number of frames to average together
 pix="1.41"              # Pixel size, A
 dstep="14"              # Camera pixel size, um
@@ -24,9 +24,9 @@ if [ "$#" -ne 1 ]
 fi
 ProcNum=$1
 rm -rf tmp logs/percent.list logs/proc* logs/pid.list >> /dev/null 2>&1
-[ -d raw_stacks ] || ( echo "Error: raw_stacks folder not found!" && exit 1 )
+[ -d raw_stacks ] || ( echo "Error: raw_stacks folder not found! Run movie_prep_parallel.sh first!" && exit 1 )
 [ -d logs ] || ( echo "Error: logs folder not found!" && exit 1 )
-[ -d Micrographs ] && echo "Error: Micrographs folder already exist!" && exit 1
+[ -d Micrographs ] && echo "Error: Micrographs folder already exist! Please remove it." && exit 1
 [ -d tmp ] || mkdir tmp
 mkdir Micrographs
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
@@ -37,11 +37,11 @@ for ima in `cat $1`
         do
                 name=`basename $ima | sed -e 's/_stack.mrcs//'`
                 ln -s "${PWD}/raw_stacks/${name}"_stack.mrcs ${PWD}/tmp/"${name}".mrc
-                ${ctffind_bin} > Micrographs/${name}_sum_corr_ctffind3.log << EOF
+                ${ctffind_bin} > Micrographs/${name}_ctffind3.log << EOF
 ${PWD}/tmp/${name}.mrc
 yes
 ${frames_avg}
-Micrographs/${name}_sum_corr.ctf
+Micrographs/${name}.ctf
 ${pix}
 ${acc}
 ${sph}
@@ -55,10 +55,10 @@ ${step_def}
 ${ast}
 no
 EOF
-                echo "      DFMID1      DFMID2      ANGAST          CC" >> Micrographs/${name}_sum_corr_ctffind3.log
-                awk 'END{printf "%12.2f%12.2f%12.2f%12.2f%14s\n\n",$2,$3,$4,$6,"Final Values"}' Micrographs/${name}_sum_corr.txt >> Micrographs/${name}_sum_corr_ctffind3.log
-                echo " CS[mm], HT[kV], AmpCnst, XMAG, DStep[um]" >> Micrographs/${name}_sum_corr_ctffind3.log
-                printf "%5.1f%9.1f%8.2f%10.1f%9.3f\n" "$sph" "$acc" "$amp" "$mag" "$dstep" >> Micrographs/${name}_sum_corr_ctffind3.log
+                echo "      DFMID1      DFMID2      ANGAST          CC" >> Micrographs/${name}_ctffind3.log
+                awk 'END{printf "%12.2f%12.2f%12.2f%12.2f%14s\n\n",$2,$3,$4,$6,"Final Values"}' Micrographs/${name}.txt >> Micrographs/${name}_ctffind3.log
+                echo " CS[mm], HT[kV], AmpCnst, XMAG, DStep[um]" >> Micrographs/${name}_ctffind3.log
+                printf "%5.1f%9.1f%8.2f%10.1f%9.3f\n" "$sph" "$acc" "$amp" "$mag" "$dstep" >> Micrographs/${name}_ctffind3.log
                 echo "${name}" >> logs/percent.list
         done
 }
@@ -84,6 +84,5 @@ while [ "$ProI" -eq 0 ]
         done
 setterm -cursor on
 rm -rf tmp logs/percent.list logs/proc* logs/pid.list
-echo -e "Done! Output files for each stack are in Micrographs/ folder. Max resolution is in ctfrings.txt file\n"
+echo -e "\nDone! Output files for each stack are in Micrographs/ folder. Max resolution is in ctfrings.txt file\n"
 for i in `ls Micrographs/*.txt | grep -v '_avrot'`;do awk 'END{print FILENAME,$7}' ${i};done | sort -n -k2 > ctfrings.txt
-
