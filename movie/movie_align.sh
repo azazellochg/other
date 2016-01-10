@@ -37,7 +37,8 @@ do
                 else
                         shift=`grep "Final shift (Average" logs/alignment/${stack}_align.log | sed -e 's/Final\ shift\ (Average//g;s/)\://g'`
                         echo -ne "Aligning frames $key/$total: ... average shift ${shift}\n"
-                        e2proc2d.py aligned_sums/${stack}.mrc aligned_sums/${stack}.mrc --outmode=int16 > /dev/null 2>&1
+                        e2proc2d.py aligned_sums/${stack}.mrc aligned_sums/${stack}_16bit.mrc --outmode=int16 > /dev/null 2>&1
+                        mv aligned_sums/${stack}_16bit.mrc aligned_sums/${stack}.mrc
                         e2proc2d.py aligned_movies/${stack}_movie.mrcs aligned_movies/${stack}_movie_16bit.mrcs --outmode=int16 > /dev/null 2>&1
                         mv aligned_movies/${stack}_movie_16bit.mrcs aligned_movies/${stack}_movie.mrcs
                 fi  
