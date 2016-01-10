@@ -84,5 +84,7 @@ while [ "$ProI" -eq 0 ]
         done
 setterm -cursor on
 rm -rf tmp logs/percent.list logs/proc* logs/pid.list
-echo -e "\nDone! Output files for each stack are in Micrographs/ folder. Max resolution is in ctfrings.txt file\n"
-for i in `ls Micrographs/*.txt | grep -v '_avrot'`;do awk 'END{print FILENAME,$7}' ${i};done | sort -n -k2 > ctfrings.txt
+echo -e "\nDone! Output files for each stack are in Micrographs/ folder. Defocus and maximum detected resolution are in ctfrings.txt file. The values are sorted by resolution.\n"
+for i in `ls Micrographs/*.txt | grep -v '_avrot'`;do awk 'END{if( $7 ~ /^[0-9]+/ ){print FILENAME,$2,$7}else{print FILENAME,"None","None"}}' ${i};done | sed 's/txt/mrc/' | sort -n -k3 > ctfrings.txt
+bad_ctf=`grep -c "None" ctfrings.txt`
+[ $bad_ctf -ne 0 ] && echo "Found $bad_ctf micrographs where CTFFIND4 has probably crashed! Check ctfrings.txt file."
