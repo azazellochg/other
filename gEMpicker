@@ -1,59 +1,40 @@
 #!/bin/bash
 
-#coarse and filter mics for gempicker to 30A, do the same with references
+#coarse and filter mics for gempicker to 20-40A, do the same with references
 #for i in `ls aligned_sums/*.mrc | sed 's/aligned_sums//g'`;do e2proc2d.py aligned_sums${i} aligned_sums_c4_f30${i} --meanshrink 4 --process=filter.lowpass.gauss:apix=5.64:cutoff_abs=0.376 --process=normalize.edgemean ;done
 
 #------------------------INPUT PARAMETERS---------------------------
 prog="/usr/local/gempicker/bin/gEMpicker"
-micrographs="$PWD/img"
-refs="$PWD/tpl"
-msk="$PWD/msk"
+micrographs="$PWD/img"  # only mrc files
+refs="$PWD/tpl"         # only mrc files
+msk="$PWD/msk"          # only tif files
 output="$PWD/output"
 threshold_low="0.1"
 threshold_high="0.3"
-box="80"     #desired box size
-angle="10" # angular step of template search
-contrast="1" # 1-protein is white, 0-protein is black
-maxpeaks="50" # max number of particles per micrograph
-dist="60" # minimal distance between picked particles
-
+box="80"              #desired box size, px
+angle="10"            # angular step of template search, degrees
+contrast="1"          # 1 - both mics and references have the same contrast, otherwise - 0
+maxpeaks="50"         # max number of particles per micrograph
+dist="60"             # minimal distance between picked particles, px
 #-------------------------------------------------------------------
 [ ! -d $res ] && mkdir $res
 ( [ ! -d $orig ] || [ ! -d $tpl ] || [ ! -d $msk ] ) && ( echo "Some directories was not found!" && exit 1 )
-
 D1=`date +%s`
 echo -e "Started on `date`"
 for m in `seq 0 1`
 do
-${prog} --nGPU=1 --nCPU=12 --mode=$m --thresh=${threshold_low} --threshHigh=${threshold_high} --dirSch=${refs} --dirTgt=${micrographs} --dirMskSch=${msk} --dirRes=${output} --angle2D=${angle} --contrast=${contrast} --boxSize=${box} --nPickMax=${maxpeaks} --boxDist=${dist}
+${prog} --nGPU=1 --nCPU=8 --mode=$m --thresh=${threshold_low} --threshHigh=${threshold_high} --dirSch=${refs} --dirTgt=${micrographs} --dirMskSch=${msk} --dirRes=${output} --angle2D=${angle} --contrast=${contrast} --boxSize=${box} --nPickMax=${maxpeaks} --boxDist=${dist}
 done
 D2=`date +%s` ; D=$((D2-D1)) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D/3600)) $(($D/60%60)) $(($D%60))
-
 #----------------COMMENTS-------------------------------------------
 <<comments
-
-Max size of original data is 4096x4096px
-
-Particles extracted from one micrograph are put in the same folder $Res/pik_ext/$name_of_micrograph
-
-The coordinates of extracted particles are exported in the folder $Res/pik_coord. Each text file contains coordinates in each micrograph of similar name
-
-Overlay correlation value: the correlation value for each selected particle is overlaid on the particle image in blue. The range of correlation values is also overlaid on the correlation map exported in TIFF format. 
-
-File formats: CCP4 and TIFF are fully supported. gEMpicker can read TIFF data in all single-channel formats ((signed) 8/16/32 integer, single and double precision). If you need multiple-channel TIFF, please let me know. The TIFF files exported from gEMpicker are in unsigned 8bit integer for visualization purpose only. At the moment, gEMpicker only partially supports MRC format since this format has some variants from different labs. Fully MRC support is planned for the near future.
-
-To convert dm3 to ccp4 maps use (do not forget to normalize and threshold data after, before start picking): 
-e2proc2d.py --process=xform.flip:axis=y input.dm3 output.map --outtype=mrc
-
-To box particles with EMAN1 batch boxer use:
-batchboxer dbbox=input.box input=input.map output=output.img
-
-To convert gEMpicker picked particles use the same program:
-e2proc2d.py --outtype=imagic 00xx__mask__xx__yyy.map output.img
-
+a) Supported mrc file formats: int8, int16, uint16, float32
+b) Max size of micrographs is 4096x4096px.
+c) Number of masks should be either one (for all references) or equal to the number of references.
+d) The coordinates of picked particles are exported in the folder $Res/pik_coord.
+e) The range of correlation values is overlaid on the correlation map exported in TIFF format. TIFF files are in uint8 for visualization purpose only.
 
  USAGE: 
-
    /usr/local/gempicker/bin/gEMpicker  --dirTgt=<string> --dirSch=<string>
                                        [--dirMskRef=<string>]
                                        --dirMskSch=<string>
@@ -68,8 +49,7 @@ e2proc2d.py --outtype=imagic 00xx__mask__xx__yyy.map output.img
                                        [--nGPU=<unsigned int>]                                                                                                                                                                               
                                        [--mpiDistTgt=<bool>] [--]                                                                                                                                                                            
                                        [--version] [-h]                                                                                                                                                                                      
-                                                                                                                                                                                                                                             
-                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                            
 Where:                                                                                                                                                                                                                                       
                                                                                                                                                                                                                                              
    --dirTgt=<string>                                                                                                                                                                                                                         
