@@ -31,44 +31,37 @@ D2=`date +%s` ; D=$((D2-D1)) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D
 a) Supported mrc file formats: int8, int16, uint16, float32
 b) Max size of micrographs is 4096x4096px.
 c) Number of masks should be either one (for all references) or equal to the number of references.
-d) The coordinates of picked particles are exported in the folder $Res/pik_coord.
-e) The range of correlation values is overlaid on the correlation map exported in TIFF format. TIFF files are in uint8 for visualization purpose only.
+d) The coordinates of picked particles are exported in the folder $output/pik_box and $output/pik_coord.
+e) The range of correlation values is overlaid on the correlation map exported in TIFF format (see $output/xcorr). TIFF files are in uint8 for visualization purpose only.
 
- USAGE: 
-   /usr/local/gempicker/bin/gEMpicker  --dirTgt=<string> --dirSch=<string>
-                                       [--dirMskRef=<string>]
-                                       --dirMskSch=<string>
-                                       --dirRes=<string> --mode=<unsigned
-                                       int> --angle2D=<float>
-                                       --contrast=<bool> --thresh=<float>
-                                       [--threshHigh=<float>]
-                                       [--nPickMax=<unsigned int>]
-                                       [--boxSize=<unsigned int>]
-                                       [--boxDist=<unsigned int>]
-                                       [--nCPU=<unsigned int>]                                                                                                                                                                               
-                                       [--nGPU=<unsigned int>]                                                                                                                                                                               
-                                       [--mpiDistTgt=<bool>] [--]                                                                                                                                                                            
-                                       [--version] [-h]                                                                                                                                                                                      
-                                                                                                                                                                                                                                            
-Where:                                                                                                                                                                                                                                       
-                                                                                                                                                                                                                                             
-   --dirTgt=<string>                                                                                                                                                                                                                         
-     (required)  Directory of target micrograph images (*.mrc)                                                                                                                                                                               
-                                                                                                                                                                                                                                             
-   --dirSch=<string>                                                                                                                                                                                                                         
-     (required)  Directory of search reference images (*.mrc)                                                                                                                                                                                
-                                                                                                                                                                                                                                             
-   --dirMskRef=<string>                                                                                                                                                                                                                      
-     Directory of masks for target images (*.tif)                                                                                                                                                                                            
-                                                                                                                                                                                                                                             
-   --dirMskSch=<string>                                                                                                                                                                                                                      
-     (required)  Directory of masks for search images (*.tif)                                                                                                                                                                                
-                                                                                                                                                                                                                                             
-   --dirRes=<string>                                                                                                                                                                                                                         
-     (required)  Directory for results                                                                                                                                                                                                       
-                                                                                                                                                                                                                                             
-   --mode=<unsigned int>                                                                                                                                                                                                                     
-     (required)  Running mode: 0-compute correlation, 1-perform picking                                                                                                                                                                      
+USAGE: 
+   gEMpicker  --dirTgt=<string> --dirSch=<string> [--dirMskTgt=<string>]
+              --dirMskSch=<string> --dirRes=<string> --mode=<unsigned int>
+              --angle2D=<float> --contrast=<bool> --thresh=<float>
+              [--threshHigh=<float>] [--nPickMax=<unsigned int>]
+              [--boxSize=<unsigned int>] [--boxDist=<unsigned int>]
+              [--boxBorder=<unsigned int>] [--nCPU=<unsigned int>]
+              [--nGPU=<unsigned int>] [--mpiDistTgt=<bool>] [--]
+              [--version] [-h]
+Where: 
+
+   --dirTgt=<string>
+     (required)  Directory of target images / micrographs (*.mrc)
+
+   --dirSch=<string>
+     (required)  Directory of search images / references (*.mrc)
+
+   --dirMskTgt=<string>
+     Directory of masks for target images / micrographs (*.tif)
+
+   --dirMskSch=<string>
+     (required)  Directory of masks for search images / references (*.tif)
+
+   --dirRes=<string>
+     (required)  Directory for results
+
+   --mode=<unsigned int>
+     (required)  Running mode: 0-compute correlation, 1-perform picking
      (box only), 2-perform picking
 
    --angle2D=<float>
@@ -78,29 +71,33 @@ Where:
      (required)  Micrograph contrast: 0-negative peaks, 1-positive peaks
 
    --thresh=<float>
-     (required)  Threshold value for picking - low limit: (0,1]
+     (required)  Threshold value for picking - low limit: [0,1]
 
    --threshHigh=<float>
-     Threshold value for picking - high limit: (0,1]
+     Threshold value for picking - high limit: [0,1] (default = 1)
 
    --nPickMax=<unsigned int>
-     Max number of particles picked from each micrograph (0 = no limit)
+     Max number of particles picked from each micrograph (default = 0, no
+     limit)
 
    --boxSize=<unsigned int>
-     Size of picked images (if not provided or = 0, use search image size)
+     Size of picked images (if not provided or = 0, use reference size)
 
    --boxDist=<unsigned int>
-     Minimal distance between peaks (if not provided or = 0, use search
-     image half-size)
+     Min distance between peaks (if not provided or = 0, use reference
+     size)
+
+   --boxBorder=<unsigned int>
+     Min distance from box to micrograph boundary (default = 0)
 
    --nCPU=<unsigned int>
-     Number of CPU cores / process
+     Number of CPU cores / process: (1)
 
    --nGPU=<unsigned int>
-     Number of GPUs / process
+     Number of GPUs / process: (0)
 
    --mpiDistTgt=<bool>
-     Distribution of target images to processes: 0-no, 1-yes
+     Distribution of micrographs to processes: (0)-no, 1-yes
 
    --,  --ignore_rest
      Ignores the rest of the labeled arguments following this flag.
@@ -114,14 +111,14 @@ Where:
 
    gEMpicker is a template-based, highly parallel GPU-accelerated particle
    picking program developed at INRIA Nancy. It runs in multi-thread and
-   multi-process mode to use all avaliable CPU cores and GPUs in a single
+   multi-process mode to use all available CPU cores and GPUs in a single
    workstation or a multi-node cluster for the correlation computation. 
 
-   Supported formats: MRC for target and search images, TIFF for masks 
+   Supported formats: MRC for micrographs and references, TIFF for masks 
 
    Copyright: Thai V. Hoang, INRIA 
 
-   Email: vanthai.hoang@inria.fr 
+   Email: hvthaibk@gmail.com 
 
    Reference: 
 
