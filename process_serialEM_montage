@@ -1,80 +1,80 @@
 #!/bin/bash
-export IMAGIC_BATCH=1
-###process_serialEM_montage.sh  Copyright (C) 2014  Grigory Sharov
-###This program comes with ABSOLUTELY NO WARRANTY.
-###This is free software, and you are welcome to redistribute it
-###under GNU GENERAL PUBLIC LICENSE Version 3.
-
-echo -e "Batch to process SerialEM mrc stacks: create a mrc raw data folder and a stack of power spectrums\n------------------------------------"
+echo -e "Batch to process SerialEM mrc stacks: unstack in raw_stacks folder and create a stack of power spectrums\n---------------------------------------------------------"
 #source your EMAN2 bashrc file here!
-source ~/eman21.rc # EMAN2.1-beta
-######################################
-#Adjust threshold parameters if you want
+source ~/eman2.rc
+#Adjust threshold parameters for FFT images, if you want (for display purposes only)
 UpperThres=7
 LowerThres=0
 ######################################
-mkdir power 2>/dev/null
-mkdir raw 2>/dev/null
-docfile=`ls -l *.mdoc | head -1 | awk '{print $NF}'`
-if cat $docfile | grep "SerialEM: Digitized by Gatan Camera on TF20" &> /dev/null
-then
-mag=`cat $docfile  | grep "Magnification" | uniq | sed -e 's/[^0-9]*//g'`
-case "$mag" in
-"19000" )
-PixSize=5.5
-;;
-"25000" )
-PixSize=4.27
-;;
-"29000" )
-PixSize=3.65
-;;
-"40000" )
-PixSize=2.6
-;;
-"50000" )
-PixSize=2.12
-;;
-"62000" )
-PixSize=1.71
-esac
-echo -en "Pixel spacing (uncoarsened!) [detected ${mag}x : ${PixSize}A/px]: "
-read PS
-: PS=${PS:=$PixSize}
-echo -en "Coarsening factor [4]: "
-read CO
-[ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
-: CO=${CO:=4}
-COPS=`echo "scale=3;$PS*$CO" | bc`
-echo -n "Mask power spectrums (this is useful for IMAGIC display)? [n] "
-read ans
-: ans=${ans:="n"}
-case $ans in
-Y|y)
-        ans="y"
-        echo -n "Put a mask on power spectrum up to first zero (A): [20] "
-        read RES
-        : RES=${RES:=20}
-        rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
-        ;;
-N|n)
-        ans="n"
-        ;;
-*)
-        echo "Wrong answer!" && exit 1
-        ;;
-esac
-else
-echo "It is not a SerialEM mdoc file!" && exit 1
+if [ -z $EMAN2DIR ]; then
+        echo "EMAN2 NOT found!" && exit 1
 fi
+[ -d FFTs ] && rm -rf FFTs
+[ -d raw_stacks ] && rm -rf raw_stacks
 [ -f output.log ] && rm -f output.log
-echo -e "`date`
-Pixel size (uncoarsened) was: $PS
+mkdir FFTs
+mkdir raw_stacks
+docfile=`ls -l *.mdoc | head -1 | awk '{print $NF}'`
+if grep "SerialEM: Digitized by Gatan Camera on TF20" $docfile &> /dev/null
+then
+        mag=`grep -m 1 "Magnification" $docfile | sed -e 's/[^0-9]*//g'`
+        case "$mag" in
+                "19000" )
+                        PixSize=5.5
+                        ;;
+                "25000" )
+                        PixSize=4.27
+                        ;;
+                "29000" )
+                        PixSize=3.65
+                        ;;
+                "40000" )
+                        PixSize=2.6
+                        ;;
+                "50000" )
+                        PixSize=2.12
+                        ;;
+                "62000" )
+                        PixSize=1.71
+        esac
+        echo -en "Pixel spacing (original) [detected ${mag}x : ${PixSize}A/px]: "
+        read PS
+        : PS=${PS:=$PixSize}
+        echo -en "Coarsening factor [2]: "
+        read CO
+        [ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
+        : CO=${CO:=2}
+        COPS=`echo "scale=3;$PS*$CO" | bc`
+        echo -n "Mask power spectrums (this is useful for IMAGIC display)? [n] "
+        read ans
+        : ans=${ans:="n"}
+        case $ans in
+                Y|y)
+                        ans="y"
+                        echo -n "Put a mask on power spectrum up to first zero (A): [50] "
+                        read RES
+                        : RES=${RES:=50}
+                        rad=`echo "scale=2;${COPS}*2/${RES}" | bc`
+                        ;;
+                N|n)
+                        ans="n"
+                        ;;
+                *)
+                        echo "Wrong answer!" && exit 1
+                        ;;
+        esac
+else
+        echo "SerialEM mdoc file is not recognized!" && exit 1
+fi
+tot=`ls *.mrc | wc -l`
+echo -e "Batch has started on `date`\n" > output.log
+D1=`date +%s`
+echo "Pixel size (original) was: $PS
 Coarsening factor was: $CO
-Micrographs converted:
-####################################\n" > output.log
-### Converting mrc SerialEM stacks to mrc files ###
-tot=`ls *.mrc | wc -l | awk '{print $1}'`
+Number of input SerialEM mrc stacks: $tot
+############################################
+Micrographs converted:" >> output.log
+# Converting mrc SerialEM stacks to mrc files
 number=1
 for i in `ls *.mrc | sed -e "s/.mrc//g"`
 do
@@ -84,75 +84,67 @@ do
         fi
         echo -en "Writing mrc images...($number out of $tot)\r"
         echo "Unstacking ${i}.mrc ..." >> output.log
-        e2proc2d.py ${i}.mrc raw/${i}.mrc --unstacking --threed2twod >> output.log 2>&1
+        e2proc2d.py ${i}.mrc raw_stacks/${i}.mrc --unstacking --threed2twod >> output.log 2>&1
         ((number++))
 done
-echo -e "####################################\nWriting mrc images..DONE!" | tee -a output.log
-### Renaming files ###
+echo "Writing mrc images...DONE! ($tot out of $tot)" | tee -a output.log
+# Renaming files
 count=1
-for i in `ls raw/*.mrc`
+for i in `ls raw_stacks/*.mrc`
 do
-        mv ${i} raw/img${count}.mrc
+        mv ${i} raw_stacks/img${count}.mrc
         ((count++))
         echo -en "Renaming mrc images...\r"
 done
-echo -e "Renaming mrc images..DONE!\n####################################" | tee -a output.log
-### Start processing of mrc files in raw directory ###
-num=`ls raw/img*.mrc | wc -l | awk '{print $1}'`
+echo "Renaming mrc images...DONE!" | tee -a output.log
+# Start processing of mrc files in raw_stacks directory
+num=`ls raw_stacks/img*.mrc | wc -l`
 count2=1
-for a in `ls raw/img*.mrc | sed -e 's/raw\///g;s/.mrc//g'`
+echo -e "############################################\nNormalizing, coarsing and calculating power spectrum: " >> output.log
+for a in `ls raw_stacks/img*.mrc | sed -e 's/raw_stacks\///g;s/.mrc//g'`
 do
-echo "Normalizing, coarsing and calculating power spectrum for raw/${a}.mrc" >> output.log
-if [ "$CO" != "1" ]
-then
-echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
-e2proc2d.py raw/${a}.mrc power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
-((count2++))
-else
-echo -ne "Normalizing and calculating power spectrum: ${count2} of ${num}\r"
-e2proc2d.py raw/${a}.mrc power/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft >> output.log 2>&1
-((count2++))
-fi
+        if [ "$CO" != "1" ]
+        then
+                echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
+                echo "Processing raw_stacks/${a}.mrc ..." >> output.log
+                e2proc2d.py raw_stacks/${a}.mrc FFTs/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
+                ((count2++))
+        else
+                echo -ne "Normalizing and calculating power spectrum: ${count2} of ${num}\r"
+                echo "Processing raw_stacks/${a}.mrc ..." >> output.log
+                e2proc2d.py raw_stacks/${a}.mrc FFTs/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft >> output.log 2>&1
+                ((count2++))
+        fi
 done
+echo "############################################" >> output.log
 if [ -n "${IMAGIC_ROOT}" ];then
-ls raw/img*.mrc | sed -e 's/raw\/img//g;s/.mrc//g' > mics.plt
-export IMAGIC_BATCH=1
-echo ""
-echo -e "####################################\nIMAGIC found! Setting micrograph number in header files..." | tee -a output.log
-${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
+        ls raw_stacks/img*.mrc | sed -e 's/raw_stacks\/img//g;s/.mrc//g' > mics.plt
+        export IMAGIC_BATCH=1
+        echo ""
+        echo "IMAGIC found! Setting micrograph number in header files..." | tee -a output.log
+        # checked only in IMAGIC version 110308 (08-03-2011)
+        ${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
 WRITE
-MICROGRAPH_ID
-PLT_FILE
+INDEX/LABEL
+LABEL_OF_INDEX
+MNUMBER
+FILE
 mics.plt
-power/pow-stack
+FFTs/pow-stack
 EOF
 fi 
-
 if [ ${ans} == "y" ];then
-echo -e "####################################\nMasking power spectrums..." | tee -a output.log
-e2proc2d.py power/pow-stack.img power/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log 2>&1
-size=`e2iminfo.py power/pow-stack.img | grep "in IMAGIC format" | awk '{print $7}'`
-rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
-e2proc2d.py power/pow-stack-t.img power/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log 2>&1
-
-if [ -n "${IMAGIC_ROOT}" ];then
-ls raw/img*.mrc | sed -e 's/raw\/img//g;s/.mrc//g' > mics.plt
-export IMAGIC_BATCH=1
-echo -e "####################################\nIMAGIC found! Setting micrograph number in header files..." | tee -a output.log
-${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
-WRITE
-MICROGRAPH_ID
-PLT_FILE
-mics.plt
-power/pow-stack-t
-EOF
-fi 
-
+        echo -e "\nMasking power spectrums..." | tee -a output.log
+        e2proc2d.py FFTs/pow-stack.img FFTs/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log 2>&1
+        size=`e2iminfo.py -H FFTs/pow-stack.img | grep nx | awk '{print $2}'`
+        rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
+        e2proc2d.py FFTs/pow-stack-t.img FFTs/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log 2>&1
 fi
-
-echo -e "DONE!"
+echo -e "\nDONE!" | tee -a output.log
 if [ ${ans} == "y" ];then
-echo "There are three stacks of power spectrums (pixel size is ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)" | tee -a output.log
+        echo "There are three stacks of power spectrums (pixel size is now ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)" | tee -a output.log
 else
-echo "There are two stacks of power spectrums (pixel size is ${COPS}): pow-stack and pow-stack-t (thresholded)" | tee -a output.log
+        echo "There are two stacks of power spectrums (pixel size is now ${COPS}): pow-stack and pow-stack-t (thresholded)" | tee -a output.log
 fi
+D2=`date +%s` ; D=$(( (D2-D1) )) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D/3600)) $(($D/60%60)) $(($D%60)) | tee -a output.log
+echo -e "Batch has finished on `date`\n" | tee -a output.log
