@@ -1,11 +1,35 @@
 #!/bin/bash
 ###Run movie_prep_parallel.sh first and source your EMAN2!
 #source /home/sharov/soft/EMAN2.1/eman2.bashrc
+
+# check if EMAN2 is sourced
 if [ -z $EMAN2DIR ]; then
         echo "EMAN2 NOT found!" && exit 1
 fi
 trap 'kill -HUP -$$' exit; nvidia-smi -l 300 >/dev/null & # by Jonathan
+
+# set path to software
 movie_soft_path="/usr/local/bin"
+xmipp_soft_path="/home/sharov/soft/scipion/software/em/xmipp/bin"
+
+# user input
+echo -n "Do you want to run xmipp optical flow alignment after motioncorr? (0 - no, 1 - yes, default: 0): "
+read opflow
+opflow=${opflow:-0}
+re='^[0-1]+$'
+if ! [[ $opflow =~ $re ]]; then
+        echo "error: Wrong answer!" >&2; exit 1
+fi
+echo -n "Do you want to save aligned movie stacks? (0 - no, 1 - yes, default: 1): "
+read ssc
+ssc=${ssc:-1}
+re='^[0-1]+$'
+if ! [[ $ssc =~ $re ]]; then
+        echo "error: Wrong answer!" >&2; exit 1
+fi
+
+# create necessary folders and check input
+[ $opflow -eq 1 ] && rm -rf aligned_sums_xmipp && mkdir aligned_sums_xmipp
 [ -d aligned_sums ] && rm -rf aligned_sums
 [ -d aligned_movies ] && rm -rf aligned_movies
 mkdir aligned_movies
@@ -14,12 +38,15 @@ mkdir aligned_sums
 mkdir -p logs/alignment
 [ ! -d raw_stacks ] && echo "No raw stacks found. Exiting.." && exit 1
 [ ! -s logs/frame.list ] && echo "No frame list found. Exiting.." && exit 1
-echo -n "Do you want to save aligned movie stacks? (0 - no, 1 - yes, default: 1): "
-read ssc 
-ssc=${ssc:-1}
-re='^[0-1]+$'
-if ! [[ $ssc =~ $re ]]; then
-        echo "error: Wrong answer!" >&2; exit 1
+
+# set output aligned stacks if required
+if [ $opflow -eq 1 ] && [ $ssc -eq 1 ]; then
+	ssc1=1 && ssc2=1
+	rm -rf aligned_movies_xmipp && mkdir aligned_movies_xmipp
+elif [ $opflow -eq 1 ] && [ $ssc -eq 0 ]; then
+	ssc1=1 && ssc2=0
+elif [ $opflow -eq 0 ] ; then
+	ssc1=$ssc
 fi
 total=`wc -l < logs/frame.list`
 key=1
@@ -28,8 +55,10 @@ for stack in `cat logs/frame.list | sed 's/.*FoilHole/FoilHole/g;s/_frames.mrc//
 do
         if [ -f raw_stacks/${stack}_stack.mrcs ] && [ ! -f aligned_sums/${stack}.mrc ]
         then
+		echo ""
                 echo -ne "Aligning frames $key/$total: ...\r"
-                timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc $ssc -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm 1 -flg logs/alignment/${stack}_align.log &>/dev/null
+		# run motioncorr within time interval
+                timeout 1.5m ${movie_soft_path}/motioncorr_v2.1 raw_stacks/${stack}_stack.mrcs -fod 2 -ssc $ssc1 -fct aligned_movies/${stack}_movie.mrcs -fcs aligned_sums/${stack}.mrc -dsp 0 -atm 1 -flg logs/alignment/${stack}_align.log &>/dev/null
                 if [ ! -f aligned_sums/${stack}.mrc ]
                 then
                         echo "raw_stacks/${stack}_stack.mrcs" >> logs/not_aligned.plt
@@ -37,20 +66,48 @@ do
                 else
                         shift=`grep "Final shift (Average" logs/alignment/${stack}_align.log | sed -e 's/Final\ shift\ (Average//g;s/)\://g'`
                         echo -ne "Aligning frames $key/$total: ... average shift ${shift}\n"
+			# convert output to 16 bit, since motioncorr produces 32 bit files
                         e2proc2d.py aligned_sums/${stack}.mrc aligned_sums/${stack}_16bit.mrc --outmode=int16 > /dev/null 2>&1
                         mv aligned_sums/${stack}_16bit.mrc aligned_sums/${stack}.mrc
-                        e2proc2d.py aligned_movies/${stack}_movie.mrcs aligned_movies/${stack}_movie_16bit.mrcs --outmode=int16 > /dev/null 2>&1
-                        mv aligned_movies/${stack}_movie_16bit.mrcs aligned_movies/${stack}_movie.mrcs
+                        
+			if [ $ssc1 -eq 1 ]; then
+				e2proc2d.py aligned_movies/${stack}_movie.mrcs aligned_movies/${stack}_movie_16bit.mrcs --outmode=int16 > /dev/null 2>&1
+                        	mv aligned_movies/${stack}_movie_16bit.mrcs aligned_movies/${stack}_movie.mrcs
+			fi
+
+			# run xmipp if required
+			if [ $opflow -eq 1 ] && [ -f aligned_movies/${stack}_movie.mrcs ]; then
+				# check if we want to save aligned stacks
+				echo -ne "Aligning frames $key/$total by optical flow: ...\r"
+				if [ $ssc2 -eq 1 ]; then
+					${xmipp_soft_path}/xmipp_movie_optical_alignment_gpu -i aligned_movies/${stack}_movie.mrcs -o aligned_sums_xmipp/${stack}.mrc --ssc --winSize 150 > logs/alignment/${stack}_align_xmipp.log
+				else
+					${xmipp_soft_path}/xmipp_movie_optical_alignment_gpu -i aligned_movies/${stack}_movie.mrcs -o aligned_sums_xmipp/${stack}.mrc --winSize 150 > logs/alignment/${stack}_align_xmipp.log
+				fi
+				echo -ne "Aligning frames $key/$total by optical flow: ... OK!\n"
+				# convert output to 16 bit, since xmipp produces 32 bit files
+	                       	e2proc2d.py aligned_sums_xmipp/${stack}.mrc aligned_sums_xmipp/${stack}_16bit.mrc --outmode=int16 > /dev/null 2>&1
+		                mv aligned_sums_xmipp/${stack}_16bit.mrc aligned_sums_xmipp/${stack}.mrc
+				mv aligned_sums_xmipp/${stack}.xmd aligned_sums_xmipp/${stack}*.txt logs/alignment/
+				if [ $ssc2 -eq 1 ]; then
+					e2proc2d.py aligned_sums_xmipp/${stack}.mrcs aligned_movies_xmipp/${stack}_movie_16bit.mrcs --outmode=int16 > /dev/null 2>&1
+	                       		mv aligned_movies_xmipp/${stack}_movie_16bit.mrcs aligned_movies_xmipp/${stack}_movie.mrcs
+					rm -f aligned_sums_xmipp/${stack}.mrcs
+				fi
+			fi
                 fi  
         fi  
         ((key++))
 done
+
+# grep shifts from log files
 grep "Final shift (Average" logs/alignment/* | sed -e 's/Final\ shift\ (Average//g;s/)\://g' > logs/average_shift1.log
 cat logs/average_shift1.log | sort -n -k2 > logs/average_shift.log
 rm -f logs/average_shift1.log
 echo -e "\nResults:  shifts in -> logs/average_shift.log
           detailed logs in -> logs/alignment/*.log
           NOT aligned images in -> logs/not_aligned.plt
-          aligned movies for Relion -> aligned_movies/*_movie.mrcs
-          aligned sums for Relion -> aligned_sums/*.mrc"
-echo "Do not forget to move CTFFIND4 output files from Micrographs/ to your aligned_sums/ folder!"
+          aligned movies after motioncorr -> aligned_movies/*_movie.mrcs
+          aligned sums after motioncorr -> aligned_sums/*.mrc"
+[ $opflow -eq 1 ] && echo "          aligned movies after xmipp optical flow -> aligned_sums_xmipp/*.mrc"
+echo "Do not forget to move CTFFIND4 output files from Micrographs/ to your aligned_sums(_xmipp)/ folder!"
