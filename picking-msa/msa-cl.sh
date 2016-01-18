@@ -107,7 +107,7 @@ echo "! IMAGIC program: summer -----------------------------------------------"
 ${imagic_dir}/incore/summer.e <<EOF
 TOTAL_SUM
 processing/particles-ref$i-norm${alirot_suffix}
-processing/particles-ref$i-sum
+processing/particles-ref$i-cl1
 none
 EOF
 }
@@ -181,8 +181,8 @@ done
 # move resulting sums/classums to output folder for inspection
 [ -d classums ] && rm -rf classums
 mkdir classums
-filelist=`ls processing/ | egrep 'particles\-ref[0-9]{1,3}\-(cl[0-9]{1,3}.img|sum)' | sed 's/.img//g;s/.hed//g' | uniq | sort -V | tail -n+2`
-firstfile=`ls processing/ | egrep 'particles\-ref[0-9]{1,3}\-(cl[0-9]{1,3}.img|sum)' | sed 's/.img//g;s/.hed//g' | uniq | sort -V | head -n1`
+filelist=`ls processing/ | egrep 'particles\-ref[0-9]{1,3}\-(cl[0-9]{1,3}.img)' | sed 's/.img//g' | sort -V | tail -n+2`
+firstfile=`ls processing/ | egrep 'particles\-ref[0-9]{1,3}\-(cl[0-9]{1,3}.img)' | sed 's/.img//g' | sort -V | head -n1`
 cp processing/${firstfile}.hed classums/all_sums.hed
 cp processing/${firstfile}.img classums/all_sums.img
 for i in `echo ${filelist}`
@@ -194,4 +194,6 @@ classums/${i}
 classums/all_sums
 EOF
 done
-echo "Output classums are in classums/ folder. Now compare them with ${input_references}!"
+echo "Output classums are in classums/all_sums. Now compare them with ${input_references}!"
+
+[ $debug -eq 0 ] && rm -rf processing ${input_particles}.tmp classums/particles-ref*-cl*
