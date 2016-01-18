@@ -92,6 +92,14 @@ particles_new=`echo ${particles_new} | sed 's/.star//'`
 }
 
 gAutomatch_parse() {
+# renumber references
+refNo=`grep "_rlnClassNumber" ${particles_extracted} | cut -d'#' -f2`
+if [ `awk -v refNo=$refNo '$refNo==0{print $refNo}' ${particles_extracted} | wc -l` -ne 0 ];then
+        awk -v refNo=$refNo 'NF<3||$refNo=$refNo+1' ${particles_extracted} > ${particles_extracted}.tmp
+        mv ${particles_extracted}.tmp ${particles_extracted}
+fi
+
+# convert them to IMAGIC
 if [ -f ${references} ];then
         e2proc2d.py ${references} picking_references.img > /dev/null 2>&1
 else
