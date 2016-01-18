@@ -194,6 +194,15 @@ classums/${i}
 classums/all_sums
 EOF
 done
-echo "Output classums are in classums/all_sums. Now compare them with ${input_references}!"
+
+# create log file with statistics
+[ -f classums/all_sums.log ] && rm -f classums/all_sums.log
+for i in `seq 1 ${numRef}`
+do
+        file_lis=`ls processing/particles-ref$i-cl*.lis`
+        echo "Ref#     Class#     Members#     Intra-class variance" >> classums/all_sums.log
+        sed -n '/Classes sorted by INTRA/,/Classes sorted by/p' ${file_lis} | tail -n+6 | head -n -3 | sed 's/E/e/g' | awk -v i=$i '{printf "%5d%10d%10d          %.04f\n",i,$3,$5,$2}' >> classums/all_sums.log
+done
+echo "Output classums are in classums/all_sums. Intra-class variance stats is in classums/all_sums.log. Now compare the classes with ${input_references} and select bad ones!"
 
 [ $debug -eq 0 ] && rm -rf processing ${input_particles}.tmp classums/particles-ref*-cl*
