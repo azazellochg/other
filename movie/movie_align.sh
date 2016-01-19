@@ -1,6 +1,9 @@
 #!/bin/bash
 ###Run movie_prep_parallel.sh first and source your EMAN2!
 #source /home/sharov/soft/EMAN2.1/eman2.bashrc
+#exporting CUDA 5.5  and scipion libs
+export LD_LIBRARY_PATH="/home/sharov/soft/scipion/software/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+export LC_ALL="en_US.UTF-8"
 
 # check if EMAN2 is sourced
 if [ -z $EMAN2DIR ]; then
