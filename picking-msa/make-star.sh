@@ -80,7 +80,10 @@ echo "`wc -l particles_bad.plt | awk '{print $1}'` bad particles found. Total nu
 
 # update input star file
 [ `grep -c mrcs ${input_star}.star` -ne `wc -l ${input_particles}.plt | awk '{print $1}'` ] && echo "ERROR! Number of particles in star file and plt files does not match" && exit 1
-awk 'FNR==NR{array[$1]=1;next}NF<3||!(FNR in array){print}' particles_bad.plt ${input_star}.star > particles_good.star
+awk 'NF<3{print}' ${input_star}.star > particles_good.star
+awk 'NF>3{print}' ${input_star}.star > ${input_star}.star.tmp
+awk 'FNR==NR{array[$1]=1;next}!(FNR in array){print}' particles_bad.plt ${input_star}.star.tmp >> particles_good.star
+rm -f ${input_star}.star.tmp
 echo "DONE! New star file: particles_good.star"
 
 # clean up
