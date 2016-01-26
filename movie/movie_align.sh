@@ -132,7 +132,7 @@ do
 done
 
 # grep shifts from log files
-grep "Final shift (Average" logs/alignment/* | sed -e 's/Final\ shift\ (Average//g;s/)\://g' > logs/average_shift1.log
+grep "Final shift (Average" logs/alignment/* | sed -e 's/logs\/alignment\///g;s/_align.log\:Final\ shift\ (Average/.mrc/g;s/)\://g' > logs/average_shift1.log
 cat logs/average_shift1.log | sort -n -k2 > logs/average_shift.log
 rm -f logs/average_shift1.log
 echo -e "\nResults:  shifts in -> logs/average_shift.log
