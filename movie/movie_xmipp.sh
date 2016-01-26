@@ -38,7 +38,6 @@ key=1
 echo ""
 for stack in `cat logs/xmipp_input_movies.list | sed 's/.*FoilHole/FoilHole/g;s/_movie.mrcs//g'`
 do
-echo $stack
         if [ -f aligned_movies/${stack}_movie.mrcs ] && [ ! -f aligned_sums_xmipp/${stack}.mrc ]
         then
                 echo ""
