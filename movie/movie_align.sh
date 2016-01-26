@@ -85,7 +85,6 @@ key=1
 echo ""
 for stack in `cat ${inputFile} | sed 's/.*FoilHole/FoilHole/g;s/_frames.mrc//g'`
 do
-echo $stack
         if [ -f raw_stacks/${stack}_stack.mrcs ] && [ ! -f aligned_sums/${stack}.mrc ]
         then
                 echo ""
