@@ -123,8 +123,7 @@ echo $stack
                                 mv aligned_sums_xmipp/${stack}_16bit.mrc aligned_sums_xmipp/${stack}.mrc
                                 mv aligned_sums_xmipp/${stack}.xmd aligned_sums_xmipp/${stack}*.txt logs/alignment/
                                 if [ $ssc2 -eq 1 ]; then
-                                        e2proc2d.py aligned_sums_xmipp/${stack}.mrcs aligned_movies_xmipp/${stack}_movie_16bit.mrcs --outmode=int16 > /dev/null 2>&1
-                                        mv aligned_movies_xmipp/${stack}_movie_16bit.mrcs aligned_movies_xmipp/${stack}_movie.mrcs
+                                        e2proc2d.py aligned_sums_xmipp/${stack}.mrcs aligned_movies_xmipp/${stack}_movie.mrcs --outmode=int16 > /dev/null 2>&1
                                         rm -f aligned_sums_xmipp/${stack}.mrcs
                                 fi
                         fi
@@ -142,5 +141,6 @@ echo -e "\nResults:  shifts in -> logs/average_shift.log
           NOT aligned images in -> logs/not_aligned.plt
           aligned movies after motioncorr -> aligned_movies/*_movie.mrcs
           aligned sums after motioncorr -> aligned_sums/*.mrc"
-[ $opflow -eq 1 ] && echo "          aligned movies after xmipp optical flow -> aligned_sums_xmipp/*.mrc"
+[ $opflow -eq 1 ] && echo "          aligned sums after xmipp optical flow -> aligned_sums_xmipp/*.mrc"
+[ $ssc2 -eq 1 ] && echo "          aligned movies after xmipp optical flow -> aligned_movies_xmipp/*_movie.mrcs"
 echo "Do not forget to move CTFFIND4 output files from Micrographs/ to your aligned_sums(_xmipp)/ folder!"
