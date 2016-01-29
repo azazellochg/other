@@ -1,50 +1,63 @@
 #!/bin/bash
-echo -e "Batch to process SerialEM mrc stacks: unstack in raw_stacks folder and create a stack of power spectrums\n---------------------------------------------------------"
-#source your EMAN2 bashrc file here!
-source ~/eman2.rc
-#Adjust threshold parameters for FFT images, if you want (for display purposes only)
+echo -e "Batch to process SerialEM mrc stacks: unstack in raw_images folder\n---------------------------------------------------------"
+source ~/eman21.rc
+# user input
+echo -n "Do you want also to calculate FFTs for each image? (1 - yes, 0 - no) [default: 0] "
+read fft
+fft=${fft:-0}
+re='^[0-1]+$'
+if ! [[ $fft =~ $re ]]; then
+        echo "ERROR! Not a number" >&2; exit 1
+fi
+# adjust threshold parameters for FFT images, if you want (for display purposes only)
 UpperThres=7
 LowerThres=0
-######################################
+# check if eman2 is sourced
 if [ -z $EMAN2DIR ]; then
         echo "EMAN2 NOT found!" && exit 1
 fi
-[ -d FFTs ] && rm -rf FFTs
-[ -d raw_stacks ] && rm -rf raw_stacks
+[ $fft -eq 1 ] && [ -d FFTs ] && rm -rf FFTs
+[ -d raw_images ] && rm -rf raw_images
 [ -f output.log ] && rm -f output.log
-mkdir FFTs
-mkdir raw_stacks
+[ $fft -eq 1 ] && mkdir FFTs
+mkdir raw_images
 docfile=`ls -l *.mdoc | head -1 | awk '{print $NF}'`
-if grep "SerialEM: Digitized by Gatan Camera on TF20" $docfile &> /dev/null
-then
-        mag=`grep -m 1 "Magnification" $docfile | sed -e 's/[^0-9]*//g'`
-        case "$mag" in
-                "19000" )
-                        PixSize=5.5
-                        ;;
-                "25000" )
-                        PixSize=4.27
-                        ;;
-                "29000" )
-                        PixSize=3.65
-                        ;;
-                "40000" )
-                        PixSize=2.6
-                        ;;
-                "50000" )
-                        PixSize=2.12
-                        ;;
-                "62000" )
-                        PixSize=1.71
-        esac
-        echo -en "Pixel spacing (original) [detected ${mag}x : ${PixSize}A/px]: "
-        read PS
-        : PS=${PS:=$PixSize}
-        echo -en "Coarsening factor [2]: "
-        read CO
-        [ $((CO%2)) -eq 0 ] || ( echo "This value should be even!" && exit 1 )
-        : CO=${CO:=2}
-        COPS=`echo "scale=3;$PS*$CO" | bc`
+[ $? -ne 0 ] && echo "ERROR! Need at least one .mdoc file to get pixel size!" && exit 1
+grep "SerialEM: Digitized by Gatan Camera on TF20" $docfile &> /dev/null
+[ $? -ne 0 ] && echo "ERROR! SerialEM mdoc file is not recognized!" && exit 1
+mag=`grep -m 1 "Magnification" $docfile | sed -e 's/[^0-9]*//g'`
+case "$mag" in
+        "19000")
+                PixSize="5.5"
+                ;;
+        "25000")
+                PixSize="4.27"
+                ;;
+        "29000")
+                PixSize="3.65"
+                ;;
+        "40000")
+                PixSize="2.6"
+                ;;
+        "50000")
+                PixSize="2.12"
+                ;;
+        "62000")
+                PixSize="1.71"
+                ;;
+        *)
+                PixSize="0"
+                ;;
+esac
+echo -n "Pixel spacing [detected ${mag}x : ${PixSize}A/px]: "
+read PS
+: PS=${PS:=$PixSize}
+echo -n "Coarse images by a factor of [2]: "
+read CO
+[ $((CO%2)) -eq 0 ] || ( echo "ERROR! This value should be even!" && exit 1 )
+: CO=${CO:=2}
+COPS=`echo "scale=3;$PS*$CO" | bc`
+if [ $fft -eq 1 ]; then
         echo -n "Mask power spectrums (this is useful for IMAGIC display)? [n] "
         read ans
         : ans=${ans:="n"}
@@ -60,17 +73,16 @@ then
                         ans="n"
                         ;;
                 *)
-                        echo "Wrong answer!" && exit 1
+                        echo "ERROR! Wrong answer!" && exit 1
                         ;;
         esac
-else
-        echo "SerialEM mdoc file is not recognized!" && exit 1
 fi
+# end of input handling
 tot=`ls *.mrc | wc -l`
 echo -e "Batch has started on `date`\n" > output.log
 D1=`date +%s`
-echo "Pixel size (original) was: $PS
-Coarsening factor was: $CO
+echo "Pixel size (original): $PS
+Coarsening factor: $CO
 Number of input SerialEM mrc stacks: $tot
 ############################################
 Micrographs converted:" >> output.log
@@ -84,46 +96,47 @@ do
         fi
         echo -en "Writing mrc images...($number out of $tot)\r"
         echo "Unstacking ${i}.mrc ..." >> output.log
-        e2proc2d.py ${i}.mrc raw_stacks/${i}.mrc --unstacking --threed2twod >> output.log 2>&1
+        e2proc2d.py ${i}.mrc raw_images/${i}.mrc --unstacking --threed2twod >> output.log 2>&1
         ((number++))
 done
 echo "Writing mrc images...DONE! ($tot out of $tot)" | tee -a output.log
 # Renaming files
 count=1
-for i in `ls raw_stacks/*.mrc`
+for i in `ls raw_images/*.mrc`
 do
-        mv ${i} raw_stacks/img${count}.mrc
+        mv ${i} raw_images/img${count}.mrc
         ((count++))
         echo -en "Renaming mrc images...\r"
 done
 echo "Renaming mrc images...DONE!" | tee -a output.log
-# Start processing of mrc files in raw_stacks directory
-num=`ls raw_stacks/img*.mrc | wc -l`
+# calculate FFTs if needed
+num=`ls raw_images/img*.mrc | wc -l`
 count2=1
-echo -e "############################################\nNormalizing, coarsing and calculating power spectrum: " >> output.log
-for a in `ls raw_stacks/img*.mrc | sed -e 's/raw_stacks\///g;s/.mrc//g'`
-do
-        if [ "$CO" != "1" ]
-        then
-                echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
-                echo "Processing raw_stacks/${a}.mrc ..." >> output.log
-                e2proc2d.py raw_stacks/${a}.mrc FFTs/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
-                ((count2++))
-        else
-                echo -ne "Normalizing and calculating power spectrum: ${count2} of ${num}\r"
-                echo "Processing raw_stacks/${a}.mrc ..." >> output.log
-                e2proc2d.py raw_stacks/${a}.mrc FFTs/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft >> output.log 2>&1
-                ((count2++))
-        fi
-done
-echo "############################################" >> output.log
-if [ -n "${IMAGIC_ROOT}" ];then
-        ls raw_stacks/img*.mrc | sed -e 's/raw_stacks\/img//g;s/.mrc//g' > mics.plt
-        export IMAGIC_BATCH=1
-        echo ""
-        echo "IMAGIC found! Setting micrograph number in header files..." | tee -a output.log
-        # checked only in IMAGIC version 110308 (08-03-2011)
-        ${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
+if [ $fft -eq 1 ]; then
+        echo -e "############################################\nNormalizing, coarsing and calculating power spectrum: " >> output.log
+        for a in `ls raw_images/img*.mrc | sed -e 's/raw_images\///g;s/.mrc//g'`
+        do
+                if [ "$CO" != "1" ]
+                then
+                        echo -ne "Normalizing, coarsing and calculating power spectrum: ${count2} of ${num}\r"
+                        echo "Processing raw_images/${a}.mrc ..." >> output.log
+                        e2proc2d.py raw_images/${a}.mrc FFTs/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft --medianshrink ${CO} >> output.log 2>&1
+                        ((count2++))
+                else
+                        echo -ne "Normalizing and calculating power spectrum: ${count2} of ${num}\r"
+                        echo "Processing raw_images/${a}.mrc ..." >> output.log
+                        e2proc2d.py raw_images/${a}.mrc FFTs/pow-stack.img --process=normalize.edgemean --process=threshold.clampminmax.nsigma:nsigma=4 --process=math.realtofft >> output.log 2>&1
+                        ((count2++))
+                fi
+        done
+        echo "############################################" >> output.log
+        if [ -n "${IMAGIC_ROOT}" ]; then
+                ls raw_images/img*.mrc | sed -e 's/raw_images\/img//g;s/.mrc//g' > mics.plt
+                export IMAGIC_BATCH=1
+                echo ""
+                echo "IMAGIC found! Setting micrograph number in header files..." | tee -a output.log
+                # checked only in IMAGIC version 110308 (08-03-2011)
+                ${IMAGIC_ROOT}/stand/headers.e <<EOF >> output.log 2>&1
 WRITE
 INDEX/LABEL
 LABEL_OF_INDEX
@@ -132,19 +145,20 @@ FILE
 mics.plt
 FFTs/pow-stack
 EOF
-fi 
-if [ ${ans} == "y" ];then
-        echo -e "\nMasking power spectrums..." | tee -a output.log
-        e2proc2d.py FFTs/pow-stack.img FFTs/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log 2>&1
-        size=`e2iminfo.py -H FFTs/pow-stack.img | grep nx | awk '{print $2}'`
-        rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
-        e2proc2d.py FFTs/pow-stack-t.img FFTs/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log 2>&1
-fi
-echo -e "\nDONE!" | tee -a output.log
-if [ ${ans} == "y" ];then
-        echo "There are three stacks of power spectrums (pixel size is now ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)" | tee -a output.log
-else
-        echo "There are two stacks of power spectrums (pixel size is now ${COPS}): pow-stack and pow-stack-t (thresholded)" | tee -a output.log
+        fi 
+        if [ ${ans} == "y" ];then
+                echo -e "\nMasking power spectrums..." | tee -a output.log
+                e2proc2d.py FFTs/pow-stack.img FFTs/pow-stack-t.img --process=threshold.clampminmax:maxval=${UpperThres}:minval=${LowerThres} --process=normalize.edgemean >> output.log 2>&1
+                size=`e2iminfo.py -H FFTs/pow-stack.img | grep nx | awk '{print $2}'`
+                rad2=`echo "scale=2;${rad}*${size}" | bc | cut -d'.' -f1`
+                e2proc2d.py FFTs/pow-stack-t.img FFTs/pow-stack-t-masked.img --process=mask.soft:inner_radius=${rad2} --process=normalize.edgemean >> output.log 2>&1
+        fi
+        echo -e "\nDONE!" | tee -a output.log
+        if [ ${ans} == "y" ];then
+                echo "There are three stacks of power spectrums (pixel size is now ${COPS}): pow-stack, pow-stack-t (thresholded) and pow-stack-t-masked (thresholded and masked up to ${RES}A)" | tee -a output.log
+        else
+                echo "There are two stacks of power spectrums (pixel size is now ${COPS}): pow-stack and pow-stack-t (thresholded)" | tee -a output.log
+        fi
 fi
 D2=`date +%s` ; D=$(( (D2-D1) )) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D/3600)) $(($D/60%60)) $(($D%60)) | tee -a output.log
 echo -e "Batch has finished on `date`\n" | tee -a output.log
