@@ -67,7 +67,7 @@ if [ $opflow -eq 1 ] && [ $ssc -eq 1 ]; then
 elif [ $opflow -eq 1 ] && [ $ssc -eq 0 ]; then
         ssc1=1 && ssc2=0
 elif [ $opflow -eq 0 ] ; then
-        ssc1=$ssc
+        ssc1=$ssc && ssc2=0
 fi
 if [ $select -eq 0 ]; then
         total=`wc -l < logs/frame.list`
