@@ -120,7 +120,8 @@ do
                                 # convert output to 16 bit, since xmipp produces 32 bit files
                                 e2proc2d.py aligned_sums_xmipp/${stack}.mrc aligned_sums_xmipp/${stack}_16bit.mrc --outmode=int16 > /dev/null 2>&1
                                 mv aligned_sums_xmipp/${stack}_16bit.mrc aligned_sums_xmipp/${stack}.mrc
-                                mv aligned_sums_xmipp/${stack}.xmd aligned_sums_xmipp/${stack}*.txt logs/alignment/
+                                mv aligned_sums_xmipp/${stack}.xmd logs/alignment/
+                                rm -f aligned_sums_xmipp/${stack}*.txt
                                 if [ $ssc2 -eq 1 ]; then
                                         e2proc2d.py aligned_sums_xmipp/${stack}.mrcs aligned_movies_xmipp/${stack}_movie.mrcs --outmode=int16 > /dev/null 2>&1
                                         rm -f aligned_sums_xmipp/${stack}.mrcs
