@@ -23,7 +23,7 @@ if [ "$#" -ne 1 ]
                 echo "usage: `basename $0` NumberOfParallelProcesses" && exit 1
 fi
 ProcNum=$1
-rm -rf tmp logs/percent.list logs/proc* logs/pid.list >> /dev/null 2>&1
+rm -rf .tmp logs/percent.list logs/proc* logs/pid.list >> /dev/null 2>&1
 
 # check input
 echo "Please select input folder containing total sums (*.mrc) or movies: (*.mrcs) "
@@ -38,7 +38,7 @@ else
 fi
 [ -d logs ] || ( echo "Error: logs folder not found!" && exit 1 )
 [ -d Micrographs ] && echo "Error: Micrographs folder already exist! Please remove it." && exit 1
-[ -d tmp ] || mkdir tmp
+[ -d .tmp ] || mkdir .tmp
 mkdir Micrographs
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
 [ ${inputType} -eq 0 ] && ls ${inputFolder}/*.mrc > logs/input_files_for_ctf.list
@@ -50,9 +50,9 @@ ctfestimateMovies () {
 for ima in `cat $1`
         do
                 name=`basename $ima | egrep -o 'FoilHole_[0-9]*_Data_[0-9]*_[0-9]*_[0-9]{8,8}_[0-9]{4,4}'`
-                ln -s "${ima}" ${PWD}/tmp/"${name}".mrc
+                ln -s "${ima}" ${PWD}/.tmp/"${name}".mrc
                 ${ctffind_bin} > Micrographs/${name}_ctffind3.log << EOF
-${PWD}/tmp/${name}.mrc
+${PWD}/.tmp/${name}.mrc
 yes
 ${frames_avg}
 Micrographs/${name}.ctf
@@ -137,7 +137,7 @@ while [ "$ProI" -eq 0 ]
                 sleep 1
         done
 setterm -cursor on
-rm -rf tmp logs/percent.list logs/proc* logs/pid.list
+rm -rf .tmp logs/percent.list logs/proc* logs/pid.list
 echo -e "\nDone! Output files are in Micrographs/ folder. Defocus and maximum detected resolution are in ctfrings.txt file. The values are sorted by resolution.\n"
 for i in `ls Micrographs/*.txt | grep -v '_avrot'`
         do
