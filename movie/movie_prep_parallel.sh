@@ -21,7 +21,7 @@ if ! [[ $num =~ $re ]]; then
 fi
 
 [ ! -d logs ] && mkdir logs
-[ -d raw_stacks ] && rm -rf raw_stacks
+[ -d raw_stacks ] && echo "raw_stacks folder already exists! Please remove it!" && exit 1
 mkdir raw_stacks
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
 #re-run find command since after check.sh script we might have renamed files
