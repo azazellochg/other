@@ -82,3 +82,4 @@ done
 echo -e "\n"
 setterm -cursor on
 rm -f logs/pid.list logs/proc* logs/percent.list
+([ -f logs/incomplete_stacks.list ] || [ -f logs/eman_problems.list ]) && echo "There were problems with EMAN2 or incomplete stacks were found! Check logs/eman_problems.list and logs/incomplete_stacks.list"
