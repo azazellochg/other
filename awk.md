@@ -8,7 +8,7 @@ awk 'FNR==NR{a[NR]=$2;b[NR]=$3;c[NR]=$4;next}{$11=a[FNR];$12=b[FNR];$10=c[FNR];}
 ```
 
 * check if value if not in array.
-The following will read file1 (one column file) into array and compare it to field 22 in file2.
+The following example will read file1 (one column file) into array and compare it to field 22 in file2.
 NF<3 skips the header of star file:
 
 ```
@@ -20,4 +20,18 @@ The following will grep numbers from lines.txt file and print field $4 for lines
 
 ```
 awk 'FNR==NR{array[$1]=1;next}(FNR in array){print $4}' lines.txt input.txt  > output.txt
+```
+
+* change values of certain columns.
+The following script will change columns $6,$17,$18 and can be used to go from C4 to C2 data star file:
+
+```
+awk '{if (NF<3) {print} else {$6="28.000000"; $17=$17*2; $18=$18*2; print} }' file_data.star
+```
+
+* calculate average of certain columns.
+The following example will print average of the first two columns:
+
+```
+awk 'NF>3{ sum += $1; sum2 += $2 } END { if (NR > 0) print sum / NR, sum2 / NR }' file
 ```
