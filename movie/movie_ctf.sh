@@ -2,6 +2,7 @@
 #This script runs ctffind4 in parallel on either movie stacks or aligned sums
 ########### user input #################
 ctffind_bin="/home/sharov/soft/ctffind-4.0.17/ctffind"
+threads="1"             # Number of threads per process
 frames_avg="1"          # Number of frames to average together (only relevant for CTF estimation from movie stacks)
 pix="1.1"               # Pixel size, A
 dstep="14"              # Camera pixel size, um
@@ -52,7 +53,7 @@ for ima in `cat $1`
         do
                 name=`basename $ima | egrep -o 'FoilHole_[0-9]*_Data_[0-9]*_[0-9]*_[0-9]{8,8}_[0-9]{4,4}'`
                 ln -s "${ima}" ${PWD}/.tmp/"${name}".mrc
-                ${ctffind_bin} > Micrographs/${name}_ctffind3.log << EOF
+                ${ctffind_bin} --omp-num-threads $threads > Micrographs/${name}_ctffind3.log << EOF
 .tmp/${name}.mrc
 yes
 ${frames_avg}
@@ -82,7 +83,7 @@ for ima in `cat $1`
         do
                 name=`basename $ima | egrep -o 'FoilHole_[0-9]*_Data_[0-9]*_[0-9]*_[0-9]{8,8}_[0-9]{4,4}'`
                 ln -s "${ima}" ${PWD}/.tmp/"${name}".mrc
-                ${ctffind_bin} > Micrographs/${name}_ctffind3.log << EOF
+                ${ctffind_bin} --omp-num-threads $threads > Micrographs/${name}_ctffind3.log << EOF
 .tmp/${name}.mrc
 Micrographs/${name}.ctf
 ${pix}
