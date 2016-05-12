@@ -10,7 +10,7 @@ sph="0.01"              # Spherical aberration, mm
 amp="0.1"               # Amplitude contrast
 size="512"              # Size of power spectrum to compute, px
 min_res="30"            # Minimum resolution, A
-max_res="2.82"          # Maximum resolution, A
+max_res="2.2"           # Maximum resolution, A
 min_def="5000.0"        # Minimum defocus, nm
 max_def="50000.0"       # Maximum defocus, nm
 step_def="500.0"        # Defocus search step, nm
@@ -36,11 +36,12 @@ elif [ `ls "${inputFolder}" | head -1 | egrep '(.mrcs)\b'` ]; then
 else
         echo "Input file format is not recognized!" && exit 1
 fi
-[ -d logs ] || ( echo "Error: logs folder not found!" && exit 1 )
+[ -d logs ] || ( echo "Warning: logs folder not found!" && mkdir logs )
 [ -d Micrographs ] && echo "Error: Micrographs folder already exist! Please remove it." && exit 1
 [ -d .tmp ] || mkdir .tmp
 mkdir Micrographs
 trap "setterm -cursor on" SIGHUP SIGINT SIGTERM
+rm -f logs/input_files_for_ctf.list
 [ ${inputType} -eq 0 ] && ls ${inputFolder}/*.mrc > logs/input_files_for_ctf.list
 [ ${inputType} -eq 1 ] && ls ${inputFolder}/*.mrcs > logs/input_files_for_ctf.list
 MicNum=`wc -l < logs/input_files_for_ctf.list`
@@ -52,7 +53,7 @@ for ima in `cat $1`
                 name=`basename $ima | egrep -o 'FoilHole_[0-9]*_Data_[0-9]*_[0-9]*_[0-9]{8,8}_[0-9]{4,4}'`
                 ln -s "${ima}" ${PWD}/.tmp/"${name}".mrc
                 ${ctffind_bin} > Micrographs/${name}_ctffind3.log << EOF
-${PWD}/.tmp/${name}.mrc
+.tmp/${name}.mrc
 yes
 ${frames_avg}
 Micrographs/${name}.ctf
@@ -80,8 +81,9 @@ ctfestimateSums () {
 for ima in `cat $1`
         do
                 name=`basename $ima | egrep -o 'FoilHole_[0-9]*_Data_[0-9]*_[0-9]*_[0-9]{8,8}_[0-9]{4,4}'`
+                ln -s "${ima}" ${PWD}/.tmp/"${name}".mrc
                 ${ctffind_bin} > Micrographs/${name}_ctffind3.log << EOF
-${ima}
+.tmp/${name}.mrc
 Micrographs/${name}.ctf
 ${pix}
 ${acc}
@@ -139,6 +141,7 @@ while [ "$ProI" -eq 0 ]
 setterm -cursor on
 rm -rf .tmp logs/percent.list logs/proc* logs/pid.list
 echo -e "\nDone! Output files are in Micrographs/ folder. Defocus and maximum detected resolution are in ctfrings.txt file. The values are sorted by resolution.\n"
+rm -f ctfrings.txt
 for i in `ls Micrographs/*.txt | grep -v '_avrot'`
         do
                 awk 'END{if( $7 ~ /^[0-9]+/ ){print FILENAME,$2,$7}else{print FILENAME,"None","None"}}' ${i};
