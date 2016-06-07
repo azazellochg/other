@@ -10,6 +10,8 @@ Gabor Papai, Gregory Sharov (c) 2015-2016
  
 ---
   * *[movie_align2.sh](movie_align2.sh)* script: this script replaces steps 3-4 in case you want to use frame stacks only (total exposure can be removed).
+  * *[movie_norm_align.sh](movie_norm_align.sh)* script is similar to movie_align2.sh. Additionally, it calculates avg+std images from the input stacks for camera normalization before motion correction.
+  * *[movie_gctf.sh](movie_gctf.sh)* script: it will launch gCTF on GPU on either movie stacks or single images. You should only provide input folder with *.mrc* or *.mrcs* files. Output is a Relion micrographs star file.
   * *[movie_ctf.sh](movie_ctf.sh)* script: it will launch CTFFIND4 in parallel (8 cores) on either movie stacks or single images. You should only provide input folder with *.mrc* or *.mrcs* files. In output *ctfrings.txt* file you will find image names with defocus values and maximum detected resolution.
   * *[movie_xmipp.sh](movie_xmipp.sh)* script: it will run xmipp optical flow alignment on movie frames that were pre-aligned with motioncorr. Input folder with movies should be *aligned_movies_motioncorr*.
 
