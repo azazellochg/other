@@ -1,0 +1,180 @@
+#!/bin/bash
+#------------------------INPUT PARAMETERS-------Asterisk (*) marks required params--------
+prog="/usr/local/gempicker/bin/gEMfitter"
+map="$PWD/emd_1046.map"                 #* only CCP4 files
+modelpdb="$PWD/1GRU.pdb"                # Model (pdb file)
+schpdb="$PWD/1GRU_A.pdb"                #* Search PDB file
+output="$PWD/output"                    #* Output folder
+
+corr="2"                                #* Correlation mode: 0-XCC, 1-ECC, 2-NCC, 3-WCC, 4-SCC, 5-CCC
+reso="23.5"                             #* Target map's resolution
+node="60"                               #* Number of icosahedral vertices (1280 for 5deg, 500 for 8deg, 60 for 23.34deg, 12 for 63.43deg)
+rotZ="15"                               #* Number of z-axis rotations (72 for 360/72=5deg, 45 for 8deg, 15 for 24deg, 6 for 60deg)
+sym="C7"                                # Symmetry type
+thrVal="-10"                            # Thresholding value for creating mask (-10)
+bLap="1"                                # Laplacian operation: (0)-no, 1-yes
+bNyq="0"                                # Map resampling using the Nyquist rate: (0)-no, 1-yes
+bRot="1"                                # GPU 3D rotation using texture fetching: 0-no, (1)-yes
+wcc="0"                                 # WCC definition: 0-constant NCC, (1)-distance
+nComp="7"                               # Number of components
+chain="ABCDEFG"                         # Comparing chains
+
+wDen="0"                                # Weight for density correlation in CCC mode (0.5)
+wSurf="0.5"                             # Weight for surface correlation in CCC mode (0.5)
+wPen="0"                                # Weight for penalty correlation in CCC mode (0.5)
+
+refine="0"                              # Off-latice refinement: (0)-no, 1-yes
+iter="10"                               # Off-latice refinement: #iteration
+toler="1e-6"                            # Off-latice refinement: tolerance (1e-6)
+
+#-------------------------------------------------------------------
+[ ! -d $res ] && mkdir $res
+( [ ! -d $orig ] || [ ! -d $tpl ] || [ ! -d $msk ] ) && ( echo "Some directories was not found!" && exit 1 )
+D1=`date +%s`
+echo -e "Started on `date`"
+${prog} --nGPU=1 --nCPU=1 --symType=$sym --resoTgt=$reso --fileTgt="${map}" --fileMdl="${modelpdb}" --fileSch="${schpdb}" --dirRes="${output}" --mCorr=$corr --nVertice=$node --nRotZ=$rotZ --bLaplacian=$bLap \
+        --bNyquist=$bNyq --bRotTexture=$bRot --mWCC=$wcc --wDensity=$wDen --wSurface=$wSurf --wPenalty=$wPen --threshMsk=$thrVal --chainName=$chain --nComponent=$nComp --iterRefine=$iter \
+        --tolRefine=$toler --bRefine=$refine
+D2=`date +%s` ; D=$((D2-D1)) ; printf "Job duration = %dhr %dmin %dsec \n" $(($D/3600)) $(($D/60%60)) $(($D%60))
+
+#----------------COMMENTS-------------------------------------------
+<<comments
+------------------------------------------------------------------------
+            Rigid-Body Multiresolution Fitting by gEMfitter               
+------------------------------------------------------------------------
+USAGE: 
+
+   /usr/local/gempicker/bin/gEMfitter  --nVertice=<unsigned int>
+                                       --nRotZ=<unsigned int>
+                                       [--bNyquist=<bool>]
+                                       [--bLaplacian=<bool>]
+                                       [--bRotTexture=<bool>]
+                                       --mCorr=<unsigned int>
+                                       [--mWCC=<unsigned int>]
+                                       [--wDensity=<double>]
+                                       [--wSurface=<double>]
+                                       [--wPenalty=<double>]
+                                       --fileTgt=<string>
+                                       --fileSch=<string>
+                                       [--fileMsk=<string>]
+                                       --dirRes=<string> --resoTgt=<double>
+                                       [--threshMsk=<double>]
+                                       [--symType=<string>]
+                                       [--bRefine=<bool>]
+                                       [--tolRefine=<double>]
+                                       [--iterRefine=<unsigned int>]
+                                       [--nComponent=<unsigned int>]
+                                       [--fileMdl=<string>]
+                                       [--chainName=<string>]
+                                       [--nCPU=<unsigned int>]
+                                       [--nGPU=<unsigned int>] [--]
+                                       [--version] [-h]
+
+
+Where: 
+
+   --nVertice=<unsigned int>
+     (required)  Number of icosahedral vertices
+
+   --nRotZ=<unsigned int>
+     (required)  Number of z-axis rotations
+
+   --bNyquist=<bool>
+     Map resampling using the Nyquist rate: (0)-no, 1-yes
+
+   --bLaplacian=<bool>
+     Laplacian operation: (0)-no, 1-yes
+
+   --bRotTexture=<bool>
+     GPU 3D rotation using texture fetching: 0-no, (1)-yes
+
+   --mCorr=<unsigned int>
+     (required)  Correlation mode: 0-XCC, 1-ECC, 2-NCC, 3-WCC, 4-SCC, 5-CCC
+
+   --mWCC=<unsigned int>
+     WCC definition: 0-constant NCC, (1)-distance
+
+   --wDensity=<double>
+     Weight for density correlation in CCC mode (0.5)
+
+   --wSurface=<double>
+     Weight for surface correlation in CCC mode (0.5)
+
+   --wPenalty=<double>
+     Weight for penalty correlation in CCC mode (0.5)
+
+   --fileTgt=<string>
+     (required)  Target map
+
+   --fileSch=<string>
+     (required)  Search pdb
+
+   --fileMsk=<string>
+     Mask map ("")
+
+   --dirRes=<string>
+     (required)  Result directory
+
+   --resoTgt=<double>
+     (required)  Target map's resolution
+
+   --threshMsk=<double>
+     Thresholding value for creating mask (-10)
+
+   --symType=<string>
+     Symmetry type ("")
+
+   --bRefine=<bool>
+     Off-latice refinement: (0)-no, 1-yes
+
+   --tolRefine=<double>
+     Off-latice refinement: tolerance (1e-6)
+
+   --iterRefine=<unsigned int>
+     Off-latice refinement: #iteration (25)
+
+   --nComponent=<unsigned int>
+     Number of components: (0)
+
+   --fileMdl=<string>
+     Model PDB ("")
+
+   --chainName=<string>
+     Comparing chains ("")
+
+   --nCPU=<unsigned int>
+     Number of CPU cores / process: (1)
+
+   --nGPU=<unsigned int>
+     Number of GPUs / process: (0)
+
+   --,  --ignore_rest
+     Ignores the rest of the labeled arguments following this flag.
+
+   --version
+     Displays version information and exits.
+
+   -h,  --help
+     Displays usage information and exits.
+
+
+   gEMfitter is a template-based, highly parallel GPU-accelerated program
+   for multi-resolution fitting of macromolecular structures developed at
+   INRIA Nancy. It can run in multi-thread and multi-process mode to use
+   all available CPU cores and GPUs in a single workstation or a multi-node
+   cluster in order to speedup the calculation of the scoring functions.
+   
+   http://gem.loria.fr/gEMfitter/index.php
+
+   Supported formats: CCP4 (target, mask, result) and PDB (search, model) 
+
+   Copyright: Thai V. Hoang, INRIA 
+
+   Email: hvthaibk@gmail.com 
+
+   Reference: 
+
+   T. V. Hoang, X. Cavin, and D. W. Ritchie, "gEMfitter: A highly parallel
+   FFT-based 3D density fitting tool with GPU texture memory acceleration,"
+   Journal of Structural Biology, 2013.
+comments
