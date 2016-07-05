@@ -1,7 +1,7 @@
 #!/bin/bash
 # clean the folders after EPU acquisition, removing all xml | jpg | dm and all metadata
 [ -f bad_files.txt ] && rm -f bad_files.txt
-find . \( -name "*.xml" -o -name "*.jpg" -o -name "*.dm" -o -name "FoilHoles" -o -name "Metadata" \) >> bad_files.txt
+find . \( -name "*.xml" -o -name "*.jpg" -o -name "*.dm" -o -name "FoilHoles" -o -name "Metadata" -o -name "GridSquare*.mrc" \) >> bad_files.txt
 [ -s bad_files.txt ] && echo "Found some metadata files: see bad_files.txt
 You can remove them by running the command: xargs -a bad_files.txt -d'\n' rm"
 [ ! -s bad_files.txt ] && rm -f bad_files.txt
