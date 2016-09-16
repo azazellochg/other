@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# 15/09/2016 works best with .mrc frame stacks from FEI EPU (MRC mode 6, uint16)
+# does not work with mrcs stacks (MRC mode 1, int16)
 #exporting CUDA 7.5 libs
 if ! (echo "${LD_LIBRARY_PATH}" | grep "cuda-7.5" > /dev/null 2>&1)
         then export LD_LIBRARY_PATH="/usr/local/cuda-7.5/lib64/:${LD_LIBRARY_PATH}"
