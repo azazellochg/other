@@ -9,7 +9,7 @@ fi
 
 #---input-parameters---
 # input movies should be in 'raw_stacks' folder
-program='/home/sharov/soft/scipion/software/em/motioncor2/bin/motioncor2'
+program='/usr/local/bin/MotionCor2-10-19-2016'
 pix="1.1"
 dose="7.05" # dose per frame
 patch="5 5" # this var does not work!!! change cmd line yourself
