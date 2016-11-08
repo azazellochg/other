@@ -9,7 +9,7 @@ fi
 
 #---input-parameters---
 # input movies should be in 'raw_stacks' folder
-program='/usr/local/bin/MotionCor2-03-16-2016'
+program='/home/sharov/soft/scipion/software/em/motioncor2/bin/motioncor2'
 pix="1.1"
 dose="7.05" # dose per frame
 patch="5 5" # this var does not work!!! change cmd line yourself
@@ -18,6 +18,17 @@ group="1"   # group frames
 frames="7"  # total N of frames
 #----------------------
 
+echo -n "Do you want to save aligned movie stacks? (0 - no, 1 - yes, default: 0): "
+read stacks
+stacks=${stacks:-0}
+re='^[0-1]+$'
+if ! [[ $stacks =~ $re ]]; then
+        echo "error: Wrong answer!" >&2; exit 1
+fi
+if [ $stacks -eq 1 ]; then
+        [ -d aligned_movies_motioncor2 ] && echo "aligned_movies_motioncor2 folder already exists! Please remove it!" && exit 1
+        mkdir aligned_movies_motioncor2
+fi
 [ -d aligned_sums_motioncor2 ] && echo "Please remove aligned_sums_motioncor2 folder and restart the script!" && exit 1
 mkdir -p logs/motioncor2 aligned_sums_motioncor2
 [ -f logs/motioncor2_avg_shift.log ] && rm -f logs/motioncor2_avg_shift.log
@@ -31,10 +42,11 @@ echo ""
 for i in `ls raw_stacks/ | sed 's/raw_stacks\///g;s/_'$suffix'//g'`;
 do
         echo -ne "Aligning stack $k/$total..\r"
-        $program -InMrc "raw_stacks/${i}_${suffix}" -OutMrc "aligned_sums_motioncor2/${i}_aligned_sum.mrc" -Patch 5 5 -FmDose "${dose}" -LogFile "logs/motioncor2/${i}_" -PixSize "${pix}" -kV $kv -Group $group >> logs/motioncor2.log 2>&1
+        $program -InMrc "raw_stacks/${i}_${suffix}" -OutMrc "aligned_sums_motioncor2/${i}_aligned_sum.mrc" -Patch 5 5 -FmDose "${dose}" -LogFile "logs/motioncor2/${i}_" -PixSize "${pix}" -kV $kv -Group $group -OutStack $stacks >> logs/motioncor2.log 2>&1
         [ $? -ne 0 ] && echo -e "Alignment failed for the stack ${k}!\n" && echo "raw_stacks/${i}_frames.mrc" >> logs/motioncor2_failed.log
         avgshift=`sed 's/-//g' logs/motioncor2/${i}_0-Patch-Full.log | awk -v fr=$fr 'NR>3{sum+=$2;sum+=$3}END{print sum/fr}'`
         echo "raw_stacks/${i}_${suffix} $avgshift px" >> logs/motioncor2_avg_shift.log
+        mv "aligned_sums_motioncor2/${i}_aligned_sum_Stk.mrc" "aligned_movies_motioncor2/${i}_aligned_movie.mrcs"
         ((k++))
 done        
 sort -n -k2 logs/motioncor2_avg_shift.log > .tmp_sort
