@@ -46,7 +46,9 @@ do
         [ $? -ne 0 ] && echo -e "Alignment failed for the stack ${k}!\n" && echo "raw_stacks/${i}_frames.mrc" >> logs/motioncor2_failed.log
         avgshift=`sed 's/-//g' logs/motioncor2/${i}_0-Patch-Full.log | awk -v fr=$fr 'NR>3{sum+=$2;sum+=$3}END{print sum/fr}'`
         echo "raw_stacks/${i}_${suffix} $avgshift px" >> logs/motioncor2_avg_shift.log
-        mv "aligned_sums_motioncor2/${i}_aligned_sum_Stk.mrc" "aligned_movies_motioncor2/${i}_aligned_movie.mrcs"
+        if [ $stacks -eq 1 ]; then
+                mv "aligned_sums_motioncor2/${i}_aligned_sum_Stk.mrc" "aligned_movies_motioncor2/${i}_aligned_movie.mrcs"
+        fi
         ((k++))
 done        
 sort -n -k2 logs/motioncor2_avg_shift.log > .tmp_sort
