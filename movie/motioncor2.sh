@@ -6,6 +6,10 @@
 if ! (echo "${LD_LIBRARY_PATH}" | grep "cuda-7.5" > /dev/null 2>&1)
         then export LD_LIBRARY_PATH="/usr/local/cuda-7.5/lib64/:${LD_LIBRARY_PATH}"
 fi
+# check if EMAN2 is sourced
+if [ -z $EMAN2DIR ]; then
+        echo "EMAN2 NOT found!" && exit 1
+fi
 
 #---input-parameters---
 # input movies should be in 'raw_stacks' folder
