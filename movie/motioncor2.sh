@@ -43,11 +43,15 @@ for i in `ls raw_stacks/ | sed 's/raw_stacks\///g;s/_'$suffix'//g'`;
 do
         echo -ne "Aligning stack $k/$total..\r"
         $program -InMrc "raw_stacks/${i}_${suffix}" -OutMrc "aligned_sums_motioncor2/${i}_aligned_sum.mrc" -Patch 5 5 -FmDose "${dose}" -LogFile "logs/motioncor2/${i}_" -PixSize "${pix}" -kV $kv -Group $group -OutStack $stacks >> logs/motioncor2.log 2>&1
-        [ $? -ne 0 ] && echo -e "Alignment failed for the stack ${k}!\n" && echo "raw_stacks/${i}_frames.mrc" >> logs/motioncor2_failed.log
-        avgshift=`sed 's/-//g' logs/motioncor2/${i}_0-Patch-Full.log | awk -v fr=$fr 'NR>3{sum+=$2;sum+=$3}END{print sum/fr}'`
-        echo "raw_stacks/${i}_${suffix} $avgshift px" >> logs/motioncor2_avg_shift.log
-        if [ $stacks -eq 1 ]; then
-                mv "aligned_sums_motioncor2/${i}_aligned_sum_Stk.mrc" "aligned_movies_motioncor2/${i}_aligned_movie.mrcs"
+        if [ $? -ne 0 ]; then
+                echo -e "Alignment failed for the stack ${k}!\n" && echo "raw_stacks/${i}_frames.mrc" >> logs/motioncor2_failed.log
+        else
+                # convert output to 16 bit, since motioncor2 produces 32 bit files
+                e2proc2d.py "aligned_sums_motioncor2/${i}_aligned_sum.mrc" "aligned_sums_motioncor2/${i}_aligned_sum_16bit.mrc" --outmode=uint16 > /dev/null 2>&1
+                mv "aligned_sums_motioncor2/${i}_aligned_sum_16bit.mrc" "aligned_sums_motioncor2/${i}_aligned_sum.mrc"
+                avgshift=`sed 's/-//g' logs/motioncor2/${i}_0-Patch-Full.log | awk -v fr=$fr 'NR>3{sum+=$2;sum+=$3}END{print sum/fr}'`
+                echo "raw_stacks/${i}_${suffix} $avgshift px" >> logs/motioncor2_avg_shift.log
+                [ $stacks -eq 1 ] && e2proc2d.py "aligned_sums_motioncor2/${i}_aligned_sum_Stk.mrc" "aligned_movies_motioncor2/${i}_aligned_movie.mrcs" --outmode=uint16 > /dev/null 2>&1
         fi
         ((k++))
 done        
