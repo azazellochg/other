@@ -15,7 +15,7 @@ fi
 # input movies should be in 'raw_stacks' folder
 program='/usr/local/bin/MotionCor2-10-19-2016'
 pix="1.1"
-dose="7.05" # dose per frame
+dose="7.05" # dose per frame, set to 0.0 to disable dose weighting
 patch="5 5" # this var does not work!!! change cmd line yourself
 kv="300"
 group="1"   # group frames
@@ -51,6 +51,10 @@ do
                 echo -e "Alignment failed for the stack ${k}!\n" && echo "raw_stacks/${i}_frames.mrc" >> logs/motioncor2_failed.log
         else
                 # convert output to 16 bit, since motioncor2 produces 32 bit files
+                if [ $dose != "0.0" ]; then
+                        e2proc2d.py "aligned_sums_motioncor2/${i}_aligned_sum_DW.mrc" "aligned_sums_motioncor2/${i}_aligned_sum_DW_16bit.mrc" --outmode=uint16 > /dev/null 2>&1
+                        mv "aligned_sums_motioncor2/${i}_aligned_sum_DW_16bit.mrc" "aligned_sums_motioncor2/${i}_aligned_sum_DW.mrc"
+                fi
                 e2proc2d.py "aligned_sums_motioncor2/${i}_aligned_sum.mrc" "aligned_sums_motioncor2/${i}_aligned_sum_16bit.mrc" --outmode=uint16 > /dev/null 2>&1
                 mv "aligned_sums_motioncor2/${i}_aligned_sum_16bit.mrc" "aligned_sums_motioncor2/${i}_aligned_sum.mrc"
                 avgshift=`sed 's/-//g' logs/motioncor2/${i}_0-Patch-Full.log | awk -v fr=$fr 'NR>3{sum+=$2;sum+=$3}END{print sum/fr}'`
