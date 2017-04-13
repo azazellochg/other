@@ -57,7 +57,6 @@ read PS
 : PS=${PS:=$PixSize}
 echo -n "Coarse images by a factor of [2]: "
 read CO
-[ $((CO%2)) -eq 0 ] || ( echo "ERROR! This value should be even!" && exit 1 )
 : CO=${CO:=2}
 COPS=`echo "scale=3;$PS*$CO" | bc`
 if [ $fft -eq 1 ]; then
