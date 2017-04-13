@@ -106,17 +106,17 @@ echo "Writing mrc images...DONE! ($tot out of $tot)" | tee -a output.log
 count=1
 for i in `ls raw_images/*.mrc`
 do
-        mv ${i} raw_images/img${count}.mrc
+        mv ${i} raw_images/img-${count}.mrc
         ((count++))
         echo -en "Renaming mrc images...\r"
 done
 echo "Renaming mrc images...DONE!" | tee -a output.log
 # calculate FFTs if needed
-num=`ls raw_images/img*.mrc | wc -l`
+num=`ls raw_images/img-*.mrc | wc -l`
 count2=1
 if [ $fft -eq 1 ]; then
         echo -e "############################################\nNormalizing, coarsing and calculating power spectrum: " >> output.log
-        for a in `ls raw_images/img*.mrc | sed -e 's/raw_images\///g;s/.mrc//g'`
+        for a in `ls raw_images/img-*.mrc | sed -e 's/raw_images\///g;s/.mrc//g'`
         do
                 if [ "$CO" != "1" ]
                 then
@@ -133,7 +133,7 @@ if [ $fft -eq 1 ]; then
         done
         echo "############################################" >> output.log
         if [ -n "${IMAGIC_ROOT}" ]; then
-                ls raw_images/img*.mrc | sed -e 's/raw_images\/img//g;s/.mrc//g' > mics.plt
+                ls raw_images/img-*.mrc | sed -e 's/raw_images\/img//g;s/.mrc//g' > mics.plt
                 export IMAGIC_BATCH=1
                 echo ""
                 echo "IMAGIC found! Setting micrograph number in header files..." | tee -a output.log
