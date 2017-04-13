@@ -1,6 +1,9 @@
 #!/bin/bash
 echo -e "Batch to process SerialEM mrc stacks: unstack in raw_images folder\n---------------------------------------------------------"
-source ~/eman21.rc
+# check if EMAN2 is sourced
+if [ -z $EMAN2DIR ]; then
+        echo "EMAN2 NOT found!" && exit 1
+fi
 # user input
 echo -n "Do you want also to calculate FFTs for each image? (1 - yes, 0 - no) [default: 0] "
 read fft
@@ -17,7 +20,7 @@ if [ -z $EMAN2DIR ]; then
         echo "EMAN2 NOT found!" && exit 1
 fi
 [ $fft -eq 1 ] && [ -d FFTs ] && rm -rf FFTs
-[ -d raw_images ] && rm -rf raw_images
+[ -d raw_images ] && echo "ERROR! Folder raw_images already exists!" && exit 1
 [ -f output.log ] && rm -f output.log
 [ $fft -eq 1 ] && mkdir FFTs
 mkdir raw_images
