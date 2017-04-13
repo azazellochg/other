@@ -26,7 +26,7 @@ fi
 mkdir raw_images
 docfile=`ls -l *.mdoc | head -1 | awk '{print $NF}'`
 [ $? -ne 0 ] && echo "ERROR! Need at least one .mdoc file to get pixel size!" && exit 1
-grep "SerialEM: Digitized by Gatan Camera on TF20" $docfile &> /dev/null
+grep "SerialEM: Digitized by" $docfile &> /dev/null
 [ $? -ne 0 ] && echo "ERROR! SerialEM mdoc file is not recognized!" && exit 1
 mag=`grep -m 1 "Magnification" $docfile | sed -e 's/[^0-9]*//g'`
 case "$mag" in
