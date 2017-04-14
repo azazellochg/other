@@ -103,10 +103,13 @@ do
 done
 echo "Writing mrc images...DONE! ($tot out of $tot)" | tee -a output.log
 # Renaming files
+total=`ls raw_images/*.mrc | wc -l`
+zeros=${#total}
 count=1
 for i in `ls raw_images/*.mrc`
 do
-        mv ${i} raw_images/img-${count}.mrc
+        countpad=`printf "%0${zeros}d" "$count"`
+        mv ${i} raw_images/img-${countpad}.mrc
         ((count++))
         echo -en "Renaming mrc images...\r"
 done
