@@ -29,9 +29,9 @@ The following script will change columns $6,$17,$18 and can be used to go from C
 awk '{if (NF<3) {print} else {$6="28.000000"; $17=$17*2; $18=$18*2; print} }' file_data.star
 ```
 
-* calculate average of certain columns.
-The following example will print average of the first two columns:
+* calculate average and stdev for a single column (#11):
 
 ```
-awk 'NF>3{ sum += $1; sum2 += $2 } END { if (NR > 0) print sum / NR, sum2 / NR }' file
+awk 'NF>3{x+=$11}END{print x/NR}' micrgraphs_ctf.star
+awk 'NF>3{x+=$11;y+=$11^2}END{print sqrt(y/NR-(x/NR)^2)}' micrographs_ctf.star
 ```
